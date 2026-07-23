@@ -385,7 +385,7 @@ class HomepageFile extends BuildFile {
   }
 
   getRunExtensionURL(extensionSlug) {
-    return `https://turbowarp.org/editor?extension=${this.getFullExtensionURL(
+    return `https://studio.cattymod.app/editor?extension=${this.getFullExtensionURL(
       extensionSlug
     )}`;
   }
