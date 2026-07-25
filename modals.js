@@ -243,7 +243,7 @@
                             },
                             TEXT: {
                                 type: Scratch.ArgumentType.STRING,
-                                defaultValue: "This is a Scratch style modal."
+                                defaultValue: "This is an interesting modal."
                             }
                         }
                     },
