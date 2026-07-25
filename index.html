@@ -4,255 +4,334 @@
 <title>CattyMod Extension Gallery</title>
 
 <style>
-
 :root {
     --accent: #4C97FF;
     --dark-accent: #3378d8;
 }
 
+* {
+    box-sizing: border-box;
+}
 
 body {
     margin: 0;
+    min-height: 100vh;
+
     background: #f2f2f2;
+
     font-family: Helvetica, Arial, sans-serif;
     color: #333;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 
+/* Header */
+
 .header {
+    width: 100%;
 
     background: var(--accent);
+
     color: white;
 
-    padding: 18px 25px;
+    padding: 20px;
 
     display: flex;
+
+    justify-content: center;
+
     align-items: center;
+
     gap: 15px;
 
     box-shadow: 0 4px 0 rgba(0,0,0,.15);
-
 }
 
 
 .header img {
-
-    width:55px;
-    height:55px;
-
+    width: 55px;
+    height: 55px;
 }
 
 
 .header h1 {
+    margin: 0;
 
-    margin:0;
-    font-size:28px;
-
+    font-size: 28px;
 }
 
+
+/* Subtitle */
 
 .subtitle {
+    margin: 25px;
 
-    padding:18px 25px;
+    text-align: center;
 
-    color:#666;
+    color: #666;
 
+    font-size: 16px;
 }
 
+
+/* Gallery */
 
 .gallery {
+    width: 100%;
 
-    display:grid;
+    max-width: 900px;
 
-    grid-template-columns:
-        repeat(auto-fill,minmax(390px,1fr));
+    padding: 25px;
 
-    gap:20px;
+    display: flex;
 
-    padding:25px;
+    justify-content: center;
 
+    align-items: center;
 }
 
 
+/* Extension card */
+
 .card {
+    width: 100%;
 
-    background:white;
+    max-width: 700px;
 
-    border-radius:14px;
+    background: white;
 
-    border:2px solid #ddd;
+    border: 2px solid #ddd;
 
-    padding:18px;
+    border-radius: 16px;
 
-    display:flex;
+    padding: 25px;
 
-    gap:18px;
+    display: flex;
+
+    align-items: center;
+
+    gap: 25px;
 
     box-shadow:
-        0 5px 0 rgba(0,0,0,.12);
+        0 6px 0 rgba(0,0,0,.12);
 
-    transition:.15s;
-
+    transition: .15s;
 }
 
 
 .card:hover {
-
-    transform:translateY(-3px);
+    transform: translateY(-4px);
 
     box-shadow:
-        0 8px 0 rgba(0,0,0,.12);
-
+        0 10px 0 rgba(0,0,0,.12);
 }
 
+
+/* Extension icon */
 
 .icon {
+    width: 160px;
 
-    width:130px;
-    height:70px;
+    height: 100px;
 
-    flex-shrink:0;
+    flex-shrink: 0;
 
-    border-radius:8px;
+    display: flex;
 
-    overflow:hidden;
+    justify-content: center;
 
+    align-items: center;
 }
 
 
-.icon img {
+.icon img,
+.icon svg {
+    width: 100%;
 
-    width:100%;
-    height:100%;
+    height: 100%;
 
-    object-fit:contain;
+    object-fit: contain;
+}
 
+
+/* Extension info */
+
+.info {
+    flex: 1;
 }
 
 
 .info h2 {
+    margin: 0 0 10px;
 
-    margin:0 0 8px;
-
-    color:var(--accent);
-
+    color: var(--accent);
 }
 
 
 .info p {
+    margin: 0 0 15px;
 
-    margin:0 0 12px;
+    line-height: 1.5;
 
-    font-size:14px;
-
-    line-height:1.4;
-
+    font-size: 14px;
 }
 
+
+/* Tags */
 
 .tag {
+    background: #e8f1ff;
 
-    background:#e8f1ff;
+    color: var(--dark-accent);
 
-    color:#3378d8;
+    border-radius: 8px;
 
-    border-radius:6px;
+    padding: 5px 10px;
 
-    padding:4px 8px;
+    font-size: 12px;
 
-    font-size:12px;
+    display: inline-block;
 
-    display:inline-block;
-
+    margin-right: 5px;
 }
 
 
+/* Buttons */
+
 .button {
+    background: var(--accent);
 
-    background:var(--accent);
+    color: white;
 
-    color:white;
+    border: none;
 
-    border:none;
+    border-radius: 10px;
 
-    border-radius:8px;
+    padding: 10px 18px;
 
-    padding:8px 16px;
+    cursor: pointer;
 
-    cursor:pointer;
+    font-size: 14px;
 
-    font-weight:bold;
+    font-weight: bold;
 
+    transition: .15s;
 }
 
 
 .button:hover {
+    background: var(--dark-accent);
 
-    background:var(--dark-accent);
-
+    transform: translateY(-2px);
 }
 
 
-/* Popup */
+.secondary {
+    background: #777;
+}
 
+
+.secondary:hover {
+    background: #555;
+}
+
+
+/* How-to popup */
 
 .popup {
+    display: none;
 
-    display:none;
+    position: fixed;
 
-    position:fixed;
+    inset: 0;
 
-    inset:0;
+    background: rgba(0,0,0,.45);
 
-    background:rgba(0,0,0,.45);
+    justify-content: center;
 
-    align-items:center;
+    align-items: center;
 
-    justify-content:center;
+    padding: 20px;
 
+    z-index: 1000;
 }
 
 
 .popup-content {
+    background: white;
 
-    background:white;
+    width: 100%;
 
-    width:420px;
+    max-width: 500px;
 
-    max-width:90%;
+    padding: 25px;
 
-    padding:25px;
-
-    border-radius:14px;
+    border-radius: 16px;
 
     box-shadow:
-        0 8px 30px rgba(0,0,0,.25);
+        0 10px 30px rgba(0,0,0,.25);
 
+    animation: popup .15s ease;
 }
 
 
 .popup-content h2 {
+    margin-top: 0;
 
-    margin-top:0;
+    color: var(--accent);
+}
 
-    color:var(--accent);
+
+.popup-content p {
+    line-height: 1.6;
+}
+
+
+/* Popup animation */
+
+@keyframes popup {
+
+    from {
+        transform: scale(.9);
+
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+
+        opacity: 1;
+    }
 
 }
 
 
-.close {
+/* Mobile */
 
-    background:#777;
+@media (max-width: 650px) {
+
+    .card {
+        flex-direction: column;
+
+        text-align: center;
+    }
+
+
+    .icon {
+        width: 200px;
+
+        height: 120px;
+    }
+
+
+    .button {
+        margin-top: 10px;
+    }
 
 }
-
-
-.close:hover {
-
-    background:#555;
-
-}
-
 </style>
 
 </head>
@@ -287,7 +366,7 @@ Discover extensions made for CattyMod.
 
 <div class="icon">
 
-<img src="/modals.svg" alt="Modals">
+<img src="/extensions/modal.svg" alt="Modals">
 
 </div>
 
@@ -330,6 +409,7 @@ Open Extension
 
 
 
+
 <div class="popup" id="howToBox">
 
 
@@ -341,9 +421,9 @@ Open Extension
 
 <p>
 
-1. Click <b>Download</b> to open CattyMod Studio.<br><br>
+1. Press <b>Download</b> to download <b>modals.js</b> and open CattyMod Studio in a new tab.<br><br>
 
-2. Click the <b>Add Extension</b> button in the bottom-left corner.<br><br>
+2. In CattyMod Studio, click the <b>Add Extension</b> button in the bottom-left corner.<br><br>
 
 3. Click the <b>CattyMod</b> category.<br><br>
 
@@ -353,7 +433,7 @@ Open Extension
 
 6. Enable <b>Run without sandbox</b>.<br><br>
 
-7. Upload the extension file.
+7. Upload the downloaded <b>modals.js</b> file and click Load.
 
 </p>
 
@@ -365,7 +445,7 @@ Download
 </button>
 
 
-<button class="button close" onclick="closeHowTo()">
+<button class="button secondary" onclick="closeHowTo()">
 
 Close
 
@@ -379,6 +459,7 @@ Close
 
 
 
+
 <script>
 
 
@@ -386,10 +467,11 @@ const extensionURL =
 "https://cattymod.app/extensions/modals.js";
 
 
+
 function showHowTo() {
 
     document.getElementById("howToBox")
-    .style.display="flex";
+    .style.display = "flex";
 
 }
 
@@ -398,7 +480,7 @@ function showHowTo() {
 function closeHowTo() {
 
     document.getElementById("howToBox")
-    .style.display="none";
+    .style.display = "none";
 
 }
 
@@ -406,9 +488,47 @@ function closeHowTo() {
 
 function downloadExtension() {
 
-    window.location.href =
-    "https://studio.cattymod.app/editor?extension=" +
-    encodeURIComponent(extensionURL);
+
+    fetch(extensionURL)
+
+    .then(response => response.blob())
+
+    .then(blob => {
+
+
+        const url =
+            URL.createObjectURL(blob);
+
+
+        const link =
+            document.createElement("a");
+
+
+        link.href = url;
+
+        link.download = "modals.js";
+
+
+        document.body.appendChild(link);
+
+
+        link.click();
+
+
+        link.remove();
+
+
+        URL.revokeObjectURL(url);
+
+
+    });
+
+
+
+    window.open(
+        "https://studio.cattymod.app/editor",
+        "_blank"
+    );
 
 }
 
@@ -417,5 +537,4 @@ function downloadExtension() {
 
 
 </body>
-
 </html>
