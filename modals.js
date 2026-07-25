@@ -16,7 +16,6 @@
             .replaceAll('"', "&quot;");
     }
 
-
     function createStyle() {
         if (document.getElementById("modals-style")) return;
 
@@ -27,99 +26,103 @@
         .scratch-modal-overlay {
             position: fixed;
             inset: 0;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            background:rgba(0,0,0,.25);
-            z-index:999999;
-            font-family:Helvetica,Arial,sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,.25);
+            z-index: 999999;
+            font-family: Helvetica, Arial, sans-serif;
         }
 
         .scratch-modal {
-            width:320px;
-            background:white;
-            border-radius:12px;
-            border:2px solid rgb(217,217,217);
-            box-shadow:rgba(0,0,0,.15) 0px 6px 0px;
-            overflow:hidden;
-            position:relative;
+            width: 320px;
+            background: white;
+            border-radius: 12px;
+            border: 2px solid rgb(217,217,217);
+            box-shadow: rgba(0,0,0,.15) 0px 6px 0px;
+            overflow: hidden;
+            position: relative;
         }
 
         .scratch-modal.large {
-            width:85vw;
-            height:85vh;
-            max-width:1200px;
-            max-height:800px;
-            display:flex;
-            flex-direction:column;
+            width: 85vw;
+            height: 85vh;
+            max-width: 1200px;
+            max-height: 800px;
+            display: flex;
+            flex-direction: column;
         }
 
         .scratch-modal-header {
-            background:rgb(0,156,204);
-            color:white;
-            padding:10px 12px;
-            font-size:14px;
-            font-weight:bold;
-            flex-shrink:0;
+            background: rgb(0,156,204);
+            color: white;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-weight: bold;
+            flex-shrink: 0;
         }
 
         .scratch-modal-close {
-            position:absolute;
-            top:6px;
-            right:10px;
-            cursor:pointer;
-            font-size:16px;
-            font-weight:bold;
-            color:white;
-            user-select:none;
-            z-index:2;
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            user-select: none;
+            z-index: 2;
         }
 
         .scratch-modal-body {
-            padding:16px;
-            font-size:14px;
-            color:rgb(51,51,51);
-            text-align:center;
+            padding: 16px;
+            font-size: 14px;
+            color: rgb(51,51,51);
+            text-align: center;
         }
 
         .scratch-modal.large .scratch-modal-body {
-            flex:1;
-            padding:0;
-            margin:0;
-            overflow:hidden;
+            flex: 1;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
         }
 
         .scratch-modal-body iframe {
-            display:block;
-            width:100%;
-            height:100%;
-            border:0;
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: 0;
         }
 
+        /* Hidden until a button is added */
         .scratch-modal-footer {
-            display:flex;
-            justify-content:flex-end;
-            gap:10px;
-            padding:12px;
-            background:rgb(242,242,242);
-            border-top:1px solid rgb(221,221,221);
-            flex-shrink:0;
+            display: none;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 12px;
+            background: rgb(242,242,242);
+            border-top: 1px solid rgb(221,221,221);
+            flex-shrink: 0;
+        }
+
+        .scratch-modal-footer.has-buttons {
+            display: flex;
         }
 
         .scratch-modal-button {
-            padding:6px 14px;
-            border-radius:6px;
-            border:none;
-            cursor:pointer;
-            font-size:13px;
-            font-weight:bold;
-            color:white;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
         }
         `;
 
         document.head.appendChild(style);
     }
-
 
     function closeModal() {
         if (modal) {
@@ -128,27 +131,22 @@
         }
     }
 
-
     function openModal(title, content, iframe = false) {
         createStyle();
 
         closeModal();
 
-        // Reset every time a modal opens
         pressedButton = "";
 
         modal = document.createElement("div");
         modal.className = "scratch-modal-overlay";
 
-
         const box = document.createElement("div");
         box.className = "scratch-modal";
-
 
         if (iframe) {
             box.classList.add("large");
         }
-
 
         box.innerHTML = `
             <div class="scratch-modal-close">✕</div>
@@ -162,9 +160,7 @@
             <div class="scratch-modal-footer"></div>
         `;
 
-
         const body = box.querySelector(".scratch-modal-body");
-
 
         if (iframe) {
             const frame = document.createElement("iframe");
@@ -174,28 +170,23 @@
             body.innerHTML = escapeHTML(content);
         }
 
-
-        box.querySelector(".scratch-modal-close")
-            .onclick = closeModal;
-
+        box.querySelector(".scratch-modal-close").onclick = closeModal;
 
         modal.appendChild(box);
         document.body.appendChild(modal);
     }
 
-
     function addButton(name) {
         if (!modal) return;
 
-        const footer =
-            modal.querySelector(".scratch-modal-footer");
+        const footer = modal.querySelector(".scratch-modal-footer");
 
+        footer.classList.add("has-buttons");
 
         const button = document.createElement("button");
 
         button.className = "scratch-modal-button";
         button.textContent = name;
-
 
         const colors = [
             "rgb(0,156,204)",
@@ -207,20 +198,15 @@
         button.style.background =
             colors[footer.children.length % colors.length];
 
-
         button.onclick = function () {
             pressedButton = name;
             closeModal();
         };
 
-
         footer.appendChild(button);
     }
 
-
-
     class Modals {
-
         getInfo() {
             return {
                 id: "modals",
@@ -231,7 +217,6 @@
                 color3: "#006b8f",
 
                 blocks: [
-
                     {
                         opcode: "showText",
                         blockType: Scratch.BlockType.COMMAND,
@@ -247,7 +232,6 @@
                             }
                         }
                     },
-
                     {
                         opcode: "showIframe",
                         blockType: Scratch.BlockType.COMMAND,
@@ -263,7 +247,6 @@
                             }
                         }
                     },
-
                     {
                         opcode: "addButton",
                         blockType: Scratch.BlockType.COMMAND,
@@ -275,13 +258,11 @@
                             }
                         }
                     },
-
                     {
                         opcode: "buttonPressed",
                         blockType: Scratch.BlockType.REPORTER,
                         text: "button pressed"
                     },
-
                     {
                         opcode: "close",
                         blockType: Scratch.BlockType.COMMAND,
@@ -291,40 +272,26 @@
             };
         }
 
-
         showText(args) {
-            openModal(
-                args.TITLE,
-                args.TEXT,
-                false
-            );
+            openModal(args.TITLE, args.TEXT, false);
         }
-
 
         showIframe(args) {
-            openModal(
-                args.TITLE,
-                args.URL,
-                true
-            );
+            openModal(args.TITLE, args.URL, true);
         }
-
 
         addButton(args) {
             addButton(args.NAME);
         }
 
-
         buttonPressed() {
             return pressedButton;
         }
-
 
         close() {
             closeModal();
         }
     }
-
 
     Scratch.extensions.register(new Modals());
 
