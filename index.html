@@ -27,7 +27,6 @@ body {
     align-items: center;
 }
 
-
 /* Header */
 
 .header {
@@ -50,19 +49,16 @@ body {
     box-shadow: 0 4px 0 rgba(0,0,0,.15);
 }
 
-
 .header img {
     width: 55px;
     height: 55px;
 }
-
 
 .header h1 {
     margin: 0;
 
     font-size: 28px;
 }
-
 
 /* Subtitle */
 
@@ -75,7 +71,6 @@ body {
 
     font-size: 16px;
 }
-
 
 /* Gallery */
 
@@ -92,7 +87,6 @@ body {
 
     align-items: center;
 }
-
 
 /* Extension card */
 
@@ -121,14 +115,12 @@ body {
     transition: .15s;
 }
 
-
 .card:hover {
     transform: translateY(-4px);
 
     box-shadow:
         0 10px 0 rgba(0,0,0,.12);
 }
-
 
 /* Extension icon */
 
@@ -146,7 +138,6 @@ body {
     align-items: center;
 }
 
-
 .icon img,
 .icon svg {
     width: 100%;
@@ -156,20 +147,17 @@ body {
     object-fit: contain;
 }
 
-
 /* Extension info */
 
 .info {
     flex: 1;
 }
 
-
 .info h2 {
     margin: 0 0 10px;
 
     color: var(--accent);
 }
-
 
 .info p {
     margin: 0 0 15px;
@@ -178,7 +166,6 @@ body {
 
     font-size: 14px;
 }
-
 
 /* Tags */
 
@@ -198,6 +185,33 @@ body {
     margin-right: 5px;
 }
 
+/* Compatibility badges */
+
+.compatibility {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    flex-wrap: wrap;
+}
+
+.compatibility a {
+    text-decoration: none;
+
+    display: inline-flex;
+}
+
+.compat-tag {
+    height: 28px;
+
+    transition: transform .15s;
+}
+
+.compat-tag:hover {
+    transform: translateY(-2px);
+}
 
 /* Buttons */
 
@@ -221,23 +235,19 @@ body {
     transition: .15s;
 }
 
-
 .button:hover {
     background: var(--dark-accent);
 
     transform: translateY(-2px);
 }
 
-
 .secondary {
     background: #777;
 }
 
-
 .secondary:hover {
     background: #555;
 }
-
 
 /* How-to popup */
 
@@ -259,7 +269,6 @@ body {
     z-index: 1000;
 }
 
-
 .popup-content {
     background: white;
 
@@ -277,18 +286,15 @@ body {
     animation: popup .15s ease;
 }
 
-
 .popup-content h2 {
     margin-top: 0;
 
     color: var(--accent);
 }
 
-
 .popup-content p {
     line-height: 1.6;
 }
-
 
 /* Popup animation */
 
@@ -308,7 +314,6 @@ body {
 
 }
 
-
 /* Mobile */
 
 @media (max-width: 650px) {
@@ -319,16 +324,18 @@ body {
         text-align: center;
     }
 
-
     .icon {
         width: 200px;
 
         height: 120px;
     }
 
-
     .button {
         margin-top: 10px;
+    }
+
+    .compatibility {
+        justify-content: center;
     }
 
 }
@@ -363,47 +370,77 @@ Discover extensions made for CattyMod.
 
 <div class="card">
 
+    <div class="icon">
 
-<div class="icon">
+        <img src="https://cattymod.app/extensions/modals.svg" alt="Modals">
 
-<img src="/extensions/modals.svg" alt="Modals">
+    </div>
 
-</div>
+    <div class="info">
 
+        <h2>Modals</h2>
 
-<div class="info">
+        <p>
+            Create Scratch 3 style popup windows
+            with titles, text, buttons, and
+            embedded web pages.
+        </p>
 
+        <span class="tag">Unsandboxed</span>
 
-<h2>Modals</h2>
+        <span class="tag">UI</span>
 
+        <br><br>
 
-<p>
-Create Scratch 3 style popup windows
-with titles, text, buttons, and
-embedded web pages.
-</p>
+        <div class="compatibility">
 
+            <a href="https://cattymod.app"
+               target="_blank"
+               rel="noopener noreferrer"
+               title="Works in CattyMod">
 
-<span class="tag">Unsandboxed</span>
+                <img
+                    class="compat-tag"
+                    src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg"
+                    alt="Works in CattyMod">
 
-<span class="tag">UI</span>
+            </a>
 
+            <a href="https://turbowarp.org"
+               target="_blank"
+               rel="noopener noreferrer"
+               title="Works in TurboWarp">
 
-<br><br>
+                <img
+                    class="compat-tag"
+                    src="https://cattymod.app/extensions/tags/tw-avaliable.svg"
+                    alt="Works in TurboWarp">
 
+            </a>
 
-<button class="button" onclick="showHowTo()">
+            <a href="https://penguinmod.com"
+               target="_blank"
+               rel="noopener noreferrer"
+               title="Works in PenguinMod">
 
-Open Extension
+                <img
+                    class="compat-tag"
+                    src="https://cattymod.app/extensions/tags/penguin-avaliable.svg"
+                    alt="Works in PenguinMod">
 
-</button>
+            </a>
 
+        </div>
 
-</div>
+        <br><br>
 
+        <button class="button" onclick="showHowTo()">
 
-</div>
+            Open in CattyMod
 
+        </button>
+
+    </div>
 
 </div>
 
