@@ -14,382 +14,222 @@
     --dark-accent:#3378d8;
 }
 
-
 * {
     box-sizing:border-box;
 }
 
-
 body {
-
     margin:0;
-
     background:#fff;
-
     color:#333;
-
     font-family:
     Helvetica,
     Arial,
     sans-serif;
-
 }
-
-
 
 .section {
-
     max-width:928px;
-
     margin:24px auto;
-
     padding:0 10px;
-
 }
-
-
 
 /* Header */
 
 .header h1 {
-
     display:flex;
-
     justify-content:center;
-
     align-items:center;
-
     gap:12px;
-
     font-size:2.5em;
-
     font-weight:normal;
-
     text-align:center;
-
 }
-
 
 .header img {
-
     width:56px;
-
     height:56px;
-
 }
-
 
 .header p {
-
     line-height:1.5;
-
 }
-
-
 
 /* Info boxes */
 
 .infobox {
-
     padding:10px;
-
     margin:10px 0;
-
     border-radius:8px;
-
     background:
     rgba(0,195,255,.2);
-
     border:
     1px solid rgba(0,187,255,.6);
-
 }
-
 
 .warning {
-
     background:
     rgba(255,0,0,.2);
-
     border-color:
     rgba(255,0,0,.5);
-
 }
-
 
 details.infobox summary {
-
     cursor:pointer;
-
     user-select:none;
-
 }
-
 
 details.infobox[open] summary {
-
     margin-bottom:10px;
-
 }
-
-
 
 /* Extension grid */
 
 .extensions {
-
     display:grid;
-
     grid-template-columns:
     repeat(3,1fr);
-
     margin:16px -4px;
-
 }
-
 
 @media(max-width:944px){
-
     .extensions {
-
         grid-template-columns:
         repeat(2,1fr);
-
     }
-
 }
-
 
 @media(max-width:650px){
-
     .extensions {
-
         grid-template-columns:
         1fr;
-
     }
-
 }
-
-
 
 /* Extension cards */
 
 .extension {
-
     background:white;
-
     border:
     2px solid #ccc;
-
     border-radius:8px;
-
     margin:4px;
-
     padding:8px;
-
     overflow:hidden;
-
+    text-align:center;
 }
-
 
 .extension h2 {
-
     margin:10px 0 5px;
-
     font-size:1.5em;
-
 }
-
 
 .extension p {
-
     line-height:1.5;
-
 }
-
-
 
 /* Extension image */
 
 .extension-banner {
-
     position:relative;
-
     margin:-8px -8px 0;
-
 }
-
 
 .extension-image {
-
     display:block;
-
     width:100%;
-
     aspect-ratio:2 / 1;
-
     object-fit:contain;
-
 }
-
-
 
 /* Hover download */
 
 .extension-buttons {
-
     position:absolute;
-
     inset:0;
-
     display:flex;
-
     justify-content:center;
-
     align-items:center;
-
     background:
     rgba(0,0,0,.5);
-
     opacity:0;
-
     transition:.15s;
-
 }
-
 
 .extension:hover .extension-buttons,
 .extension:focus-within .extension-buttons {
-
     opacity:1;
-
 }
-
-
 
 .extension-buttons button {
-
     background:
     var(--accent);
-
     color:white;
-
     border:none;
-
     border-radius:8px;
-
     padding:10px 18px;
-
     cursor:pointer;
-
     font-size:14px;
-
     font-weight:bold;
-
     transition:.15s;
-
 }
-
 
 .extension-buttons button:hover {
-
     background:
     var(--dark-accent);
-
 }
-
-
 
 /* Extension tags */
 
 .tags {
-
     display:flex;
-
     justify-content:center;
-
     align-items:center;
-
     flex-wrap:wrap;
-
     gap:5px;
-
     margin-top:10px;
-
 }
-
 
 .tag {
-
     background:#e8f1ff;
-
     color:
     var(--dark-accent);
-
     border-radius:8px;
-
     padding:5px 9px;
-
     font-size:12px;
-
 }
-
-
 
 /* Compatibility badges */
 
 .compatibility {
-
     display:flex;
-
     justify-content:center;
-
     align-items:center;
-
     flex-wrap:wrap;
-
     gap:8px;
-
     margin-top:12px;
-
 }
-
 
 .compatibility a {
-
     display:flex;
-
 }
-
 
 .compat-tag {
-
     height:28px;
-
     transition:
     transform .15s;
-
 }
-
 
 .compat-tag:hover {
-
     transform:
     translateY(-2px);
-
 }
-
-
 
 /* Links */
 
 a {
-
     color:#3378d8;
-
 }
-
 
 </style>
 
@@ -434,7 +274,7 @@ Projects using these extensions should be opened in CattyMod or another compatib
 
 <b>Some extensions require unsandboxed mode.</b><br>
 
-All extensions here have been tested, but you do not <strong>have</strong> to use them. It's fine to just use the ones from TurboWarp already in the gallery.
+All extensions here have been tested and are safe, but you do not <strong>have</strong> to use them if you are worried.
 
 </div>
 
@@ -461,7 +301,7 @@ CattyMod Studio</a>.<br><br>
 
 4. Upload the downloaded extension file in the <strong>files</strong> tab.<br><br>
 
-5. Enable unsandboxed mode if the extension requires it.
+5. Enable unsandboxed mode if the extension requires it and click <strong>Load</strong>.
 
 </p>
 
