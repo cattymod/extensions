@@ -34,8 +34,6 @@ body {
     padding:0 10px;
 }
 
-/* Header */
-
 .header h1 {
     display:flex;
     justify-content:center;
@@ -55,8 +53,6 @@ body {
     line-height:1.5;
 }
 
-/* Info boxes */
-
 .infobox {
     padding:10px;
     margin:10px 0;
@@ -73,17 +69,6 @@ body {
     border-color:
     rgba(255,0,0,.5);
 }
-
-details.infobox summary {
-    cursor:pointer;
-    user-select:none;
-}
-
-details.infobox[open] summary {
-    margin-bottom:10px;
-}
-
-/* Extension grid */
 
 .extensions {
     display:grid;
@@ -106,8 +91,6 @@ details.infobox[open] summary {
     }
 }
 
-/* Extension cards */
-
 .extension {
     background:white;
     border:
@@ -128,8 +111,6 @@ details.infobox[open] summary {
     line-height:1.5;
 }
 
-/* Extension image */
-
 .extension-banner {
     position:relative;
     margin:-8px -8px 0;
@@ -142,14 +123,13 @@ details.infobox[open] summary {
     object-fit:contain;
 }
 
-/* Hover download */
-
 .extension-buttons {
     position:absolute;
     inset:0;
     display:flex;
     justify-content:center;
     align-items:center;
+    gap:10px;
     background:
     rgba(0,0,0,.5);
     opacity:0;
@@ -179,8 +159,6 @@ details.infobox[open] summary {
     var(--dark-accent);
 }
 
-/* Extension tags */
-
 .tags {
     display:flex;
     justify-content:center;
@@ -198,8 +176,6 @@ details.infobox[open] summary {
     padding:5px 9px;
     font-size:12px;
 }
-
-/* Compatibility badges */
 
 .compatibility {
     display:flex;
@@ -225,18 +201,12 @@ details.infobox[open] summary {
     translateY(-2px);
 }
 
-/* Footer */
-
 .footer {
     margin-top:40px;
     padding:24px 10px;
     text-align:center;
     border-top:2px solid #ddd;
     color:#666;
-}
-
-.footer p {
-    margin:0;
 }
 
 .footer nav {
@@ -253,8 +223,6 @@ details.infobox[open] summary {
     text-decoration:underline;
 }
 
-/* Links */
-
 a {
     color:#3378d8;
 }
@@ -263,113 +231,56 @@ a {
 
 </head>
 
-
 <body>
-
 
 <div class="section header">
 
-
 <h1>
-
 <img src="https://cattymod.app/assets/cattymod-icon-DpwK82Wr.png">
-
 CattyMod Extension Gallery
-
 </h1>
 
-
 <p>
-
 The official place to find extensions made for CattyMod.
-
 </p>
-
 
 <div class="infobox warning">
-
 <b>These extensions may not work in Scratch.</b><br>
-
 Projects using these extensions should be opened in CattyMod or another compatible editor.
-
 </div>
-
 
 <div class="infobox">
-
 <b>Some extensions require unsandboxed mode.</b><br>
-
-All extensions here have been tested and are safe, but you do not <strong>have</strong> to use them if you are worried.
-
+When loading them into other editors, make sure to enable "Run without sandbox".
 </div>
 
-<details class="infobox">
-
-<summary>
-
-<b>How to load extensions from here</b>
-
-</summary>
-
-
-<p>
-
-1. Hover over an extension and click <b>Download</b>.<br><br>
-
-2. Open
-<a href="https://studio.cattymod.app/editor" target="_blank">
-CattyMod Studio</a>.<br><br>
-
-3. Open <b>Add Extension</b> and choose <b>Custom Extension</b>.<br><br>
-
-4. Upload the downloaded extension file in the <strong>files</strong> tab.<br><br>
-
-5. Enable unsandboxed mode if the extension requires it and click <strong>Load</strong>.
-
-</p>
-
-
-</details>
-
-
 </div>
-
-
-
-
-
 <div class="section">
-
 
 <div class="extensions">
 
-
-
 <div class="extension">
 
-
 <div class="extension-banner">
-
 
 <img
 class="extension-image"
 src="https://cattymod.app/extensions/modals.svg"
 alt="Modals">
 
-
 <div class="extension-buttons">
 
+<button onclick="openInCattyMod()">
+Open in CattyMod
+</button>
+
 <button onclick="downloadExtension()">
-
 Download
-
 </button>
 
 </div>
 
-
 </div>
-
 
 
 <h2>
@@ -378,12 +289,9 @@ Modals
 
 
 <p>
-
 Create Scratch 3 style popup windows
 with titles, text, buttons, and embedded web pages.
-
 </p>
-
 
 
 <div class="tags">
@@ -399,9 +307,7 @@ UI
 </div>
 
 
-
 <div class="compatibility">
-
 
 <a href="https://cattymod.app"
 target="_blank"
@@ -413,7 +319,6 @@ src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg"
 alt="Works in CattyMod">
 
 </a>
-
 
 
 <a href="https://turbowarp.org"
@@ -428,7 +333,6 @@ alt="Works in TurboWarp">
 </a>
 
 
-
 <a href="https://penguinmod.com"
 target="_blank"
 title="Works in PenguinMod">
@@ -440,22 +344,14 @@ alt="Works in PenguinMod">
 
 </a>
 
-
 </div>
 
 
 </div>
 
-
 </div>
 
-
-
 </div>
-
-
-</div>
-
 
 
 <footer class="footer">
@@ -467,32 +363,40 @@ CattyMod Extension Gallery
 <nav>
 
 <a href="https://github.com/cattymod/extensions" target="_blank">
-GitHub</a>
+GitHub
+</a>
 
 <a href="https://studio.cattymod.app" target="_blank">
-Studio</a>
+Studio
+</a>
 
 <a href="https://github.com/cattymod/extensions/blob/main/credits.md" target="_blank">
-Credits</a>
+Credits
+</a>
 
 </nav>
 
 </footer>
 
 
-
-
-
 <script>
-
 
 const extensionURL =
 "https://cattymod.app/extensions/modals.js";
 
 
+function openInCattyMod(){
+
+window.open(
+"https://studio.cattymod.app/editor?extension=" +
+encodeURIComponent(extensionURL),
+"_blank"
+);
+
+}
+
 
 function downloadExtension(){
-
 
 fetch(extensionURL)
 
@@ -500,38 +404,27 @@ fetch(extensionURL)
 
 .then(blob => {
 
-
 const url =
 URL.createObjectURL(blob);
-
 
 const link =
 document.createElement("a");
 
-
 link.href=url;
-
 
 link.download="modals.js";
 
-
 document.body.appendChild(link);
-
 
 link.click();
 
-
 link.remove();
-
 
 URL.revokeObjectURL(url);
 
-
 });
 
-
 }
-
 
 </script>
 
