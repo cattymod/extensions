@@ -1,5 +1,8 @@
 # Extension Credits
 
+## Website
+Inspired by [TurboWarp Extension Gallery](https://extensions.turbowarp.org).
+
 ## modals.svg
  - Created by [@BlueDome77](https://github.com/BlueDome77) for the Window Controls extension Collaboration
  - Dango inspried by the dango emoji from [Twemoji](https://twemoji.twitter.com/) under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
