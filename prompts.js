@@ -231,39 +231,38 @@
             document.head.appendChild(style);
         }
 
-        closePrompt(result = null, resolveCallback = null) {
+        closePrompt(result = null) {
             if (!this.isOpen) return;
             this.isOpen = false;
             
-            if (result !== null) {
+            if (result !== null && result !== undefined) {
                 this.lastResult = result;
             }
 
             if (this.currentModal) {
-                this.currentModal.classList.remove('tw-prompt-visible');
+                const modalRef = this.currentModal;
+                modalRef.classList.remove('tw-prompt-visible');
                 setTimeout(() => {
-                    if (this.currentModal && this.currentModal.parentNode) {
-                        this.currentModal.parentNode.removeChild(this.currentModal);
+                    if (modalRef && modalRef.parentNode) {
+                        modalRef.parentNode.removeChild(modalRef);
                     }
-                    this.currentModal = null;
                 }, 250);
+                this.currentModal = null;
             }
 
             if (this.resolveCurrent) {
                 const res = this.resolveCurrent;
                 this.resolveCurrent = null;
                 res(result);
-            } else if (resolveCallback) {
-                resolveCallback(result);
             }
         }
 
         createModalBase(message, contentElement, buttons) {
-            if (this.isOpen) {
-                this.closePrompt(null);
-            }
-
             return new Promise((resolve) => {
+                if (this.isOpen) {
+                    this.closePrompt(null);
+                }
+
                 this.isOpen = true;
                 this.resolveCurrent = resolve;
 
@@ -553,7 +552,7 @@
             return this.createModalBase(args.MESSAGE, input, [
                 { text: 'Cancel', primary: false, getValue: () => '' },
                 { text: 'OK', primary: true, getValue: () => input.value }
-            ]).then(res => res === null ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : res);
         }
 
         numberPrompt(args) {
@@ -563,7 +562,7 @@
             return this.createModalBase(args.MESSAGE, input, [
                 { text: 'Cancel', primary: false, getValue: () => '' },
                 { text: 'OK', primary: true, getValue: () => input.value === '' ? '' : Number(input.value) }
-            ]).then(res => res === null ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : res);
         }
 
         colourPicker() {
@@ -591,7 +590,7 @@
             return this.createModalBase('Choose a colour:', container, [
                 { text: 'Cancel', primary: false, getValue: () => '' },
                 { text: 'OK', primary: true, getValue: () => input.value }
-            ]).then(res => res === null ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : res);
         }
 
         textareaPrompt(args) {
@@ -600,7 +599,7 @@
             return this.createModalBase(args.MESSAGE, textarea, [
                 { text: 'Cancel', primary: false, getValue: () => '' },
                 { text: 'OK', primary: true, getValue: () => textarea.value }
-            ]).then(res => res === null ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : res);
         }
 
         choosePrompt(args) {
@@ -616,7 +615,7 @@
             return this.createModalBase('Choose an option:', select, [
                 { text: 'Cancel', primary: false, getValue: () => '' },
                 { text: 'OK', primary: true, getValue: () => select.value }
-            ]).then(res => res === null ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : res);
         }
 
         sliderPrompt(args) {
@@ -646,7 +645,7 @@
             return this.createModalBase(args.MESSAGE, container, [
                 { text: 'Cancel', primary: false, getValue: () => '' },
                 { text: 'OK', primary: true, getValue: () => Number(slider.value) }
-            ]).then(res => res === null ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : Number(res));
         }
 
         datePrompt() {
@@ -658,7 +657,7 @@
             return this.createModalBase('Select a date:', input, [
                 { text: 'Cancel', primary: false, getValue: () => '' },
                 { text: 'OK', primary: true, getValue: () => input.value }
-            ]).then(res => res === null ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : res);
         }
 
         timePrompt() {
@@ -672,7 +671,7 @@
             return this.createModalBase('Select a time:', input, [
                 { text: 'Cancel', primary: false, getValue: () => '' },
                 { text: 'OK', primary: true, getValue: () => input.value }
-            ]).then(res => res === null ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : res);
         }
 
         setTheme(args) {
