@@ -368,6 +368,7 @@
                         opcode: 'confirm',
                         blockType: Scratch.BlockType.BOOLEAN,
                         text: 'confirm [MESSAGE]',
+                        disableMonitor: true,
                         arguments: {
                             MESSAGE: {
                                 type: Scratch.ArgumentType.STRING,
@@ -379,6 +380,7 @@
                         opcode: 'textPrompt',
                         blockType: Scratch.BlockType.REPORTER,
                         text: 'text prompt [MESSAGE]',
+                        disableMonitor: true,
                         arguments: {
                             MESSAGE: {
                                 type: Scratch.ArgumentType.STRING,
@@ -390,6 +392,7 @@
                         opcode: 'numberPrompt',
                         blockType: Scratch.BlockType.REPORTER,
                         text: 'number prompt [MESSAGE]',
+                        disableMonitor: true,
                         arguments: {
                             MESSAGE: {
                                 type: Scratch.ArgumentType.STRING,
@@ -400,12 +403,14 @@
                     {
                         opcode: 'colourPicker',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: 'colour picker'
+                        text: 'colour picker',
+                        disableMonitor: true
                     },
                     {
                         opcode: 'textareaPrompt',
                         blockType: Scratch.BlockType.REPORTER,
                         text: 'textarea prompt [MESSAGE]',
+                        disableMonitor: true,
                         arguments: {
                             MESSAGE: {
                                 type: Scratch.ArgumentType.STRING,
@@ -417,6 +422,7 @@
                         opcode: 'choosePrompt',
                         blockType: Scratch.BlockType.REPORTER,
                         text: 'choose [OPTIONS]',
+                        disableMonitor: true,
                         arguments: {
                             OPTIONS: {
                                 type: Scratch.ArgumentType.STRING,
@@ -428,6 +434,7 @@
                         opcode: 'sliderPrompt',
                         blockType: Scratch.BlockType.REPORTER,
                         text: 'slider [MESSAGE] min [MIN] max [MAX] default [DEF]',
+                        disableMonitor: true,
                         arguments: {
                             MESSAGE: {
                                 type: Scratch.ArgumentType.STRING,
@@ -450,12 +457,14 @@
                     {
                         opcode: 'datePrompt',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: 'date prompt'
+                        text: 'date prompt',
+                        disableMonitor: true
                     },
                     {
                         opcode: 'timePrompt',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: 'time prompt'
+                        text: 'time prompt',
+                        disableMonitor: true
                     },
                     '---',
                     {
@@ -511,12 +520,14 @@
                     {
                         opcode: 'promptOpen',
                         blockType: Scratch.BlockType.BOOLEAN,
-                        text: 'prompt open?'
+                        text: 'prompt open?',
+                        disableMonitor: true
                     },
                     {
                         opcode: 'getLastResult',
                         blockType: Scratch.BlockType.REPORTER,
-                        text: 'last result'
+                        text: 'last result',
+                        disableMonitor: true
                     }
                 ],
                 menus: {
