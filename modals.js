@@ -1,3 +1,10 @@
+// Name: Modals
+// ID: modals
+// Description: Create Scratch 3 style popup windows with titles, text, buttons, and embedded web pages.
+// By: Noahscratch493
+// Context: "Modal" is a type of popup window that appears above the main content and asks for attention.
+// License: MIT
+
 (function (Scratch) {
     "use strict";
 
@@ -276,9 +283,13 @@
             openModal(args.TITLE, args.TEXT, false);
         }
 
-        showIframe(args) {
-            openModal(args.TITLE, args.URL, true);
-        }
+        async showIframe(args) {
+    const url = Scratch.Cast.toString(args.URL);
+
+    if (await Scratch.canEmbed(url)) {
+        openModal(args.TITLE, url, true);
+    }
+}
 
         addButton(args) {
             addButton(args.NAME);
