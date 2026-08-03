@@ -112,7 +112,7 @@
             width: 100%;
             height: 100%;
             border: 0;
-            background: transparent;
+            background: ${isDark ? "#ffffff" : "transparent"};
         }
 
         .scratch-modal-footer {
@@ -345,11 +345,7 @@
         }
 
         async showHtml(args) {
-            let htmlContent = Scratch.Cast.toString(args.HTML);
-            const textColor = currentTheme === "Dark" ? "white" : "#333333";
-
-            htmlContent = `<div style="color: ${textColor}; font-family: Helvetica, Arial, sans-serif; height: 100%; box-sizing: border-box;">${htmlContent}</div>`;
-
+            const htmlContent = Scratch.Cast.toString(args.HTML);
             const base64 = btoa(unescape(encodeURIComponent(htmlContent)));
             const dataUrl = `data:text/html;base64,${base64}`;
 
