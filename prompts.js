@@ -14,9 +14,9 @@
     class PromptExtension {
         constructor() {
             this.theme = 'Light';
-            this.accentColor = '#FF69B4';
+            this.accentColor = '#009CC8'; // Updated to match Scratch 3 style blue by default or keep custom
             this.title = 'Prompt';
-            this.icon = '💬';
+            this.icon = '';
             this.lastResult = '';
             this.currentModal = null;
             this.currentResolver = null;
@@ -33,15 +33,15 @@
             style.id = 'turbowarp-prompts-styles';
             style.textContent = `
                 :root {
-                    --tw-bg: #f9f9f9;
-                    --tw-text: #111111;
-                    --tw-border: #cccccc;
-                    --tw-overlay: rgba(0, 0, 0, 0.3);
-                    --tw-accent: #FF69B4;
-                    --tw-accent-hover: #ff52a7;
-                    --tw-accent-active: #e64999;
+                    --tw-bg: #ffffff;
+                    --tw-text: #333333;
+                    --tw-border: #d9d9d9;
+                    --tw-overlay: rgba(0, 0, 0, 0.25);
+                    --tw-accent: #009CC8;
+                    --tw-accent-hover: #0088b2;
+                    --tw-accent-active: #007399;
                     --tw-select-bg: #ffffff;
-                    --tw-select-text: #111111;
+                    --tw-select-text: #333333;
                 }
 
                 .tw-prompt-overlay[data-theme="Dark"] {
@@ -54,12 +54,12 @@
                 }
 
                 .tw-prompt-overlay[data-theme="Light"] {
-                    --tw-bg: #f9f9f9;
-                    --tw-text: #111111;
-                    --tw-border: #cccccc;
-                    --tw-overlay: rgba(0, 0, 0, 0.3);
+                    --tw-bg: #ffffff;
+                    --tw-text: #333333;
+                    --tw-border: #d9d9d9;
+                    --tw-overlay: rgba(0, 0, 0, 0.25);
                     --tw-select-bg: #ffffff;
-                    --tw-select-text: #111111;
+                    --tw-select-text: #333333;
                 }
 
                 .tw-prompt-overlay {
@@ -74,8 +74,8 @@
                     align-items: center;
                     z-index: 999999;
                     opacity: 0;
-                    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-                    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                    transition: opacity 0.2s ease;
+                    font-family: Helvetica, Arial, sans-serif;
                     box-sizing: border-box;
                 }
 
@@ -87,17 +87,16 @@
                     background: var(--tw-bg);
                     color: var(--tw-text);
                     width: 100%;
-                    max-width: 420px;
-                    border-radius: 16px;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-                    padding: 24px;
+                    max-width: 340px;
+                    border-radius: 12px;
+                    border: 2px solid var(--tw-border);
+                    box-shadow: 0 6px 0px rgba(0, 0, 0, 0.15);
+                    overflow: hidden;
                     box-sizing: border-box;
-                    transform: scale(0.9);
-                    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+                    transform: scale(0.95);
+                    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
                     display: flex;
                     flex-direction: column;
-                    gap: 16px;
-                    border: 1px solid var(--tw-border);
                 }
 
                 .tw-prompt-overlay.tw-prompt-visible .tw-prompt-modal {
@@ -105,26 +104,35 @@
                 }
 
                 .tw-prompt-header {
+                    background: var(--tw-accent);
+                    color: white;
+                    padding: 10px 12px;
+                    font-size: 14px;
+                    font-weight: bold;
                     display: flex;
                     align-items: center;
-                    gap: 12px;
+                    gap: 8px;
+                    position: relative;
                 }
 
                 .tw-prompt-icon {
-                    font-size: 24px;
-                    width: 40px;
-                    height: 40px;
+                    font-size: 16px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background: rgba(0,0,0,0.05);
-                    border-radius: 10px;
                 }
 
                 .tw-prompt-title {
-                    font-size: 18px;
-                    font-weight: 700;
+                    font-size: 14px;
+                    font-weight: bold;
                     margin: 0;
+                }
+
+                .tw-prompt-body {
+                    padding: 16px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
                 }
 
                 .tw-prompt-message {
@@ -132,32 +140,33 @@
                     line-height: 1.4;
                     margin: 0;
                     word-break: break-word;
+                    color: var(--tw-text);
+                    text-align: left;
                 }
 
                 .tw-prompt-input, .tw-prompt-textarea {
                     width: 100%;
-                    padding: 10px 14px;
-                    border-radius: 8px;
+                    padding: 8px 10px;
+                    border-radius: 6px;
                     border: 1px solid var(--tw-border);
-                    background: transparent;
+                    background: var(--tw-bg);
                     color: var(--tw-text);
                     font-size: 14px;
                     box-sizing: border-box;
                     outline: none;
-                    transition: border-color 0.2s, box-shadow 0.2s;
+                    transition: border-color 0.2s;
                 }
 
                 .tw-prompt-select {
                     width: 100%;
-                    padding: 10px 14px;
-                    border-radius: 8px;
+                    padding: 8px 10px;
+                    border-radius: 6px;
                     border: 1px solid var(--tw-border);
                     background: var(--tw-select-bg);
                     color: var(--tw-select-text);
                     font-size: 14px;
                     box-sizing: border-box;
                     outline: none;
-                    transition: border-color 0.2s, box-shadow 0.2s;
                 }
 
                 .tw-prompt-select option {
@@ -167,7 +176,6 @@
 
                 .tw-prompt-input:focus, .tw-prompt-textarea:focus, .tw-prompt-select:focus {
                     border-color: var(--tw-accent);
-                    box-shadow: 0 0 0 3px var(--tw-accent-glow, rgba(255, 105, 180, 0.3));
                 }
 
                 .tw-prompt-textarea {
@@ -193,60 +201,58 @@
                 }
 
                 .tw-prompt-color-picker {
-                    width: 50px;
-                    height: 40px;
-                    border: none;
-                    border-radius: 8px;
+                    width: 44px;
+                    height: 36px;
+                    border: 1px solid var(--tw-border);
+                    border-radius: 6px;
                     cursor: pointer;
                     background: none;
+                    padding: 0;
                 }
 
                 .tw-prompt-color-preview {
                     flex: 1;
-                    height: 40px;
-                    border-radius: 8px;
+                    height: 36px;
+                    border-radius: 6px;
                     border: 1px solid var(--tw-border);
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     font-family: monospace;
                     font-weight: bold;
+                    font-size: 13px;
                 }
 
                 .tw-prompt-buttons {
                     display: flex;
                     justify-content: flex-end;
                     gap: 8px;
-                    margin-top: 4px;
+                    padding: 0 16px 16px 16px;
                 }
 
                 .tw-prompt-btn {
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                    font-size: 14px;
-                    font-weight: 600;
+                    padding: 6px 16px;
+                    border-radius: 16px;
+                    font-size: 13px;
+                    font-weight: bold;
                     cursor: pointer;
                     border: none;
-                    transition: background 0.1s, transform 0.1s;
-                }
-
-                .tw-prompt-btn:active {
-                    transform: scale(0.96);
+                    transition: background 0.1s;
                 }
 
                 .tw-prompt-btn-cancel {
-                    background: transparent;
-                    color: var(--tw-text);
-                    border: 1px solid var(--tw-border);
+                    background: #e5e5e5;
+                    color: #575e75;
+                    border: 1px solid rgba(0, 0, 0, 0.15);
                 }
 
                 .tw-prompt-btn-cancel:hover {
-                    background: rgba(0,0,0,0.05);
+                    background: #d9d9d9;
                 }
 
                 .tw-prompt-btn-ok {
                     background: var(--tw-accent);
-                    color: #ffffff;
+                    color: white;
                 }
 
                 .tw-prompt-btn-ok:hover {
@@ -275,9 +281,9 @@
             return {
                 id: 'prompts',
                 name: 'Prompts',
-                color1: '#FF69B4',
-                color2: '#E0559E',
-                color3: '#C74188',
+                color1: '#009CC8',
+                color2: '#0088B2',
+                color3: '#007399',
                 blocks: [
                     {
                         opcode: 'confirm',
@@ -401,7 +407,7 @@
                         arguments: {
                             COLOR: {
                                 type: Scratch.ArgumentType.COLOR,
-                                defaultValue: '#FF69B4'
+                                defaultValue: '#009CC8'
                             }
                         }
                     },
@@ -423,7 +429,7 @@
                         arguments: {
                             ICON: {
                                 type: Scratch.ArgumentType.STRING,
-                                defaultValue: '💬'
+                                defaultValue: ''
                             }
                         }
                     },
@@ -488,23 +494,28 @@
                     header.appendChild(iconEl);
                 }
 
-                const titleEl = document.createElement('h3');
+                const titleEl = document.createElement('div');
                 titleEl.className = 'tw-prompt-title';
                 titleEl.textContent = this.title;
                 header.appendChild(titleEl);
 
                 modal.appendChild(header);
 
+                const body = document.createElement('div');
+                body.className = 'tw-prompt-body';
+
                 if (message) {
                     const msgEl = document.createElement('p');
                     msgEl.className = 'tw-prompt-message';
                     msgEl.textContent = message;
-                    modal.appendChild(msgEl);
+                    body.appendChild(msgEl);
                 }
 
                 if (contentElement) {
-                    modal.appendChild(contentElement);
+                    body.appendChild(contentElement);
                 }
+
+                modal.appendChild(body);
 
                 const btnContainer = document.createElement('div');
                 btnContainer.className = 'tw-prompt-buttons';
@@ -527,7 +538,7 @@
                             if (modalRef && modalRef.parentNode) {
                                 modalRef.parentNode.removeChild(modalRef);
                             }
-                        }, 250);
+                        }, 200);
                         this.currentModal = null;
                     }
 
