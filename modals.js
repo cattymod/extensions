@@ -145,7 +145,7 @@
             padding: 16px;
             font-size: 14px;
             color: ${text};
-            text-align: left;
+            text-align: center;
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -285,7 +285,7 @@
             margin: 0;
             word-break: break-word;
             color: ${text};
-            text-align: left;
+            text-align: center;
         }
         `;
     }
