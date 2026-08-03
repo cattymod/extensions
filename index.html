@@ -128,6 +128,7 @@ body {
     position:absolute;
     inset:0;
     display:flex;
+    flex-direction:column;
     justify-content:center;
     align-items:center;
     gap:10px;
@@ -135,6 +136,7 @@ body {
     rgba(0,0,0,.5);
     opacity:0;
     transition:.15s;
+    padding: 10px;
 }
 
 .extension:hover .extension-buttons,
@@ -153,6 +155,7 @@ body {
     font-size:14px;
     font-weight:bold;
     transition:.15s;
+    width: 160px;
 }
 
 .extension-buttons button:hover {
@@ -277,6 +280,10 @@ Open in CattyMod
 
 <button onclick="downloadExtension()">
 Download
+</button>
+
+<button onclick="copyExtensionURL(this)">
+Copy URL
 </button>
 
 </div>
@@ -424,6 +431,18 @@ URL.revokeObjectURL(url);
 
 });
 
+}
+
+
+function copyExtensionURL(button) {
+    navigator.clipboard.writeText(extensionURL).then(() => {
+        button.textContent = "Copied!";
+        setTimeout(() => {
+            button.textContent = "Copy URL";
+        }, 1000);
+    }).catch(err => {
+        console.error("Failed to copy URL: ", err);
+    });
 }
 
 </script>
