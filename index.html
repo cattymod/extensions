@@ -101,8 +101,6 @@ body {
     padding:8px;
     overflow:hidden;
     text-align:center;
-    display:flex;
-    flex-direction:column;
 }
 
 .extension h2 {
@@ -112,7 +110,6 @@ body {
 
 .extension p {
     line-height:1.5;
-    flex-grow:1;
 }
 
 .extension-banner {
@@ -125,17 +122,15 @@ body {
     width:100%;
     aspect-ratio:2 / 1;
     object-fit:contain;
-    overflow: hidden;
 }
 
 .extension-buttons {
     position:absolute;
     inset:0;
     display:flex;
-    flex-direction:column;
     justify-content:center;
     align-items:center;
-    gap:8px;
+    gap:10px;
     background:
     rgba(0,0,0,.5);
     opacity:0;
@@ -153,12 +148,11 @@ body {
     color:white;
     border:none;
     border-radius:8px;
-    padding:8px 14px;
+    padding:10px 18px;
     cursor:pointer;
-    font-size:13px;
+    font-size:14px;
     font-weight:bold;
     transition:.15s;
-    width:160px;
 }
 
 .extension-buttons button:hover {
@@ -277,16 +271,12 @@ alt="Modals">
 
 <div class="extension-buttons">
 
-<button onclick="openInCattyMod('https://cattymod.app/extensions/modals.js')">
+<button onclick="openInCattyMod()">
 Open in CattyMod
 </button>
 
-<button onclick="downloadExtension('https://cattymod.app/extensions/modals.js', 'modals.js')">
+<button onclick="downloadExtension()">
 Download
-</button>
-
-<button onclick="copyURL('https://cattymod.app/extensions/modals.js', this)">
-Copy URL
 </button>
 
 </div>
@@ -300,12 +290,10 @@ Modals
 
 
 <p>
-Create Scratch 3 style popup windows
-with titles, text, buttons, and embedded web pages.
+Create Scratch 3 style popup windows, embeds, and interactive prompts.
 </p>
 
 
-<div>
 <div class="tags">
 
 <span class="tag">
@@ -356,101 +344,6 @@ alt="Works in PenguinMod">
 
 </a>
 
-</div>
-</div>
-
-
-</div>
-
-<div class="extension">
-
-<div class="extension-banner">
-
-<img
-class="extension-image"
-src="https://cattymod.app/extensions/prompts.svg"
-alt="Prompts">
-<div class="extension-buttons">
-
-<button onclick="openInCattyMod('https://cattymod.app/extensions/prompts.js')">
-Open in CattyMod
-</button>
-
-<button onclick="downloadExtension('https://cattymod.app/extensions/prompts.js', 'prompts.js')">
-Download
-</button>
-
-<button onclick="copyURL('https://cattymod.app/extensions/prompts.js', this)">
-Copy URL
-</button>
-
-</div>
-
-</div>
-
-
-<h2>
-Prompts
-</h2>
-
-
-<p>
-Ask your users to pick colours, answer a question and more.
-</p>
-
-
-<div>
-<div class="tags">
-
-<span class="tag">
-Unsandboxed
-</span>
-
-<span class="tag">
-UI
-</span>
-
-</div>
-
-
-<div class="compatibility">
-
-<a href="https://cattymod.app"
-target="_blank"
-title="Works in CattyMod">
-
-<img
-class="compat-tag"
-src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg"
-alt="Works in CattyMod">
-
-</a>
-
-
-<a href="https://turbowarp.org"
-target="_blank"
-title="Works in TurboWarp">
-
-<img
-class="compat-tag"
-src="https://cattymod.app/extensions/tags/tw-avaliable.svg"
-alt="Works in TurboWarp">
-
-</a>
-
-
-<a href="https://penguinmod.com"
-target="_blank"
-title="Works in PenguinMod">
-
-<img
-class="compat-tag"
-src="https://cattymod.app/extensions/tags/penguin-avaliable.svg"
-alt="Works in PenguinMod">
-
-</a>
-
-</div>
 </div>
 
 
@@ -488,7 +381,11 @@ Credits
 
 <script>
 
-function openInCattyMod(extensionURL){
+const extensionURL =
+"https://cattymod.app/extensions/modals.js";
+
+
+function openInCattyMod(){
 
 window.open(
 "https://studio.cattymod.app/editor?extension=" +
@@ -499,7 +396,7 @@ encodeURIComponent(extensionURL),
 }
 
 
-function downloadExtension(extensionURL, filename){
+function downloadExtension(){
 
 fetch(extensionURL)
 
@@ -515,7 +412,7 @@ document.createElement("a");
 
 link.href=url;
 
-link.download=filename;
+link.download="modals.js";
 
 document.body.appendChild(link);
 
@@ -525,18 +422,6 @@ link.remove();
 
 URL.revokeObjectURL(url);
 
-});
-
-}
-
-function copyURL(extensionURL, button){
-
-navigator.clipboard.writeText(extensionURL).then(() => {
-    const originalText = button.textContent;
-    button.textContent = "Copied!";
-    setTimeout(() => {
-        button.textContent = originalText;
-    }, 1000);
 });
 
 }
