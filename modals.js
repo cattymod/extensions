@@ -14,6 +14,8 @@
 
     let modal = null;
     let pressedButton = "";
+    let accentColor = "rgb(0,156,204)";
+    let currentTheme = "Light";
 
     function escapeHTML(text) {
         return String(text)
@@ -24,10 +26,19 @@
     }
 
     function createStyle() {
-        if (document.getElementById("modals-style")) return;
+        let style = document.getElementById("modals-style");
+        if (!style) {
+            style = document.createElement("style");
+            style.id = "modals-style";
+            document.head.appendChild(style);
+        }
 
-        const style = document.createElement("style");
-        style.id = "modals-style";
+        const isDark = currentTheme === "Dark";
+        const bg = isDark ? "#1e1e1e" : "#ffffff";
+        const text = isDark ? "#ffffff" : "#333333";
+        const border = isDark ? "#444444" : "rgb(217,217,217)";
+        const footerBg = isDark ? "#2d2d2d" : "rgb(242,242,242)";
+        const footerBorder = isDark ? "#444444" : "rgb(221,221,221)";
 
         style.textContent = `
         .scratch-modal-overlay {
@@ -43,9 +54,10 @@
 
         .scratch-modal {
             width: 320px;
-            background: white;
+            background: ${bg};
+            color: ${text};
             border-radius: 12px;
-            border: 2px solid rgb(217,217,217);
+            border: 2px solid ${border};
             box-shadow: rgba(0,0,0,.15) 0px 6px 0px;
             overflow: hidden;
             position: relative;
@@ -61,7 +73,7 @@
         }
 
         .scratch-modal-header {
-            background: rgb(0,156,204);
+            background: ${accentColor};
             color: white;
             padding: 10px 12px;
             font-size: 14px;
@@ -84,7 +96,7 @@
         .scratch-modal-body {
             padding: 16px;
             font-size: 14px;
-            color: rgb(51,51,51);
+            color: ${text};
             text-align: center;
         }
 
@@ -102,14 +114,13 @@
             border: 0;
         }
 
-        /* Hidden until a button is added */
         .scratch-modal-footer {
             display: none;
             justify-content: flex-end;
             gap: 10px;
             padding: 12px;
-            background: rgb(242,242,242);
-            border-top: 1px solid rgb(221,221,221);
+            background: ${footerBg};
+            border-top: 1px solid ${footerBorder};
             flex-shrink: 0;
         }
 
@@ -127,8 +138,6 @@
             color: white;
         }
         `;
-
-        document.head.appendChild(style);
     }
 
     function closeModal() {
@@ -140,7 +149,6 @@
 
     function openModal(title, content, iframe = false) {
         createStyle();
-
         closeModal();
 
         pressedButton = "";
@@ -177,7 +185,10 @@
             body.innerHTML = escapeHTML(content);
         }
 
-        box.querySelector(".scratch-modal-close").onclick = closeModal;
+        box.querySelector(".scratch-modal-close").onclick = function () {
+            pressedButton = "close";
+            closeModal();
+        };
 
         modal.appendChild(box);
         document.body.appendChild(modal);
@@ -187,23 +198,20 @@
         if (!modal) return;
 
         const footer = modal.querySelector(".scratch-modal-footer");
-
         footer.classList.add("has-buttons");
 
         const button = document.createElement("button");
-
         button.className = "scratch-modal-button";
         button.textContent = name;
 
         const colors = [
-            "rgb(0,156,204)",
+            accentColor,
             "rgb(255,102,128)",
             "rgb(89,192,89)",
             "rgb(255,171,25)"
         ];
 
-        button.style.background =
-            colors[footer.children.length % colors.length];
+        button.style.background = colors[footer.children.length % colors.length];
 
         button.onclick = function () {
             pressedButton = name;
@@ -255,6 +263,21 @@
                         }
                     },
                     {
+                        opcode: "showHtml",
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: "show html modal title [TITLE] html [HTML]",
+                        arguments: {
+                            TITLE: {
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: "Custom HTML"
+                            },
+                            HTML: {
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: "<h1>Hello World!</h1>"
+                            }
+                        }
+                    },
+                    {
                         opcode: "addButton",
                         blockType: Scratch.BlockType.COMMAND,
                         text: "add button called [NAME] to current modal",
@@ -262,6 +285,29 @@
                             NAME: {
                                 type: Scratch.ArgumentType.STRING,
                                 defaultValue: "OK"
+                            }
+                        }
+                    },
+                    {
+                        opcode: "setAccent",
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: "set accent color [COLOR]",
+                        arguments: {
+                            COLOR: {
+                                type: Scratch.ArgumentType.COLOR,
+                                defaultValue: "#009ccc"
+                            }
+                        }
+                    },
+                    {
+                        opcode: "setTheme",
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: "set theme [THEME]",
+                        arguments: {
+                            THEME: {
+                                type: Scratch.ArgumentType.STRING,
+                                menu: "themeMenu",
+                                defaultValue: "Light"
                             }
                         }
                     },
@@ -275,7 +321,13 @@
                         blockType: Scratch.BlockType.COMMAND,
                         text: "close modal"
                     }
-                ]
+                ],
+                menus: {
+                    themeMenu: {
+                        acceptReporters: true,
+                        items: ["Light", "Dark"]
+                    }
+                }
             };
         }
 
@@ -284,15 +336,35 @@
         }
 
         async showIframe(args) {
-    const url = Scratch.Cast.toString(args.URL);
+            const url = Scratch.Cast.toString(args.URL);
 
-    if (await Scratch.canEmbed(url)) {
-        openModal(args.TITLE, url, true);
-    }
-}
+            if (await Scratch.canEmbed(url)) {
+                openModal(args.TITLE, url, true);
+            }
+        }
+
+        async showHtml(args) {
+            const htmlContent = Scratch.Cast.toString(args.HTML);
+            const base64 = btoa(unescape(encodeURIComponent(htmlContent)));
+            const dataUrl = `data:text/html;base64,${base64}`;
+
+            if (await Scratch.canEmbed(dataUrl)) {
+                openModal(args.TITLE, dataUrl, true);
+            }
+        }
 
         addButton(args) {
             addButton(args.NAME);
+        }
+
+        setAccent(args) {
+            accentColor = Scratch.Cast.toString(args.COLOR);
+            createStyle();
+        }
+
+        setTheme(args) {
+            currentTheme = Scratch.Cast.toString(args.THEME);
+            createStyle();
         }
 
         buttonPressed() {
