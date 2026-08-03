@@ -19,7 +19,8 @@
             this.icon = '💬';
             this.lastResult = '';
             this.currentModal = null;
-            this.resolveCurrent = null;
+            this.currentResolver = null;
+            this.currentId = 0;
             this.isOpen = false;
 
             this.injectStyles();
@@ -39,6 +40,8 @@
                     --tw-accent: #FF69B4;
                     --tw-accent-hover: #ff52a7;
                     --tw-accent-active: #e64999;
+                    --tw-select-bg: #ffffff;
+                    --tw-select-text: #111111;
                 }
 
                 .tw-prompt-overlay[data-theme="Dark"] {
@@ -46,6 +49,8 @@
                     --tw-text: #ffffff;
                     --tw-border: #444444;
                     --tw-overlay: rgba(0, 0, 0, 0.7);
+                    --tw-select-bg: #2d2d2d;
+                    --tw-select-text: #ffffff;
                 }
 
                 .tw-prompt-overlay[data-theme="Light"] {
@@ -53,6 +58,8 @@
                     --tw-text: #111111;
                     --tw-border: #cccccc;
                     --tw-overlay: rgba(0, 0, 0, 0.3);
+                    --tw-select-bg: #ffffff;
+                    --tw-select-text: #111111;
                 }
 
                 .tw-prompt-overlay {
@@ -127,7 +134,7 @@
                     word-break: break-word;
                 }
 
-                .tw-prompt-input, .tw-prompt-textarea, .tw-prompt-select {
+                .tw-prompt-input, .tw-prompt-textarea {
                     width: 100%;
                     padding: 10px 14px;
                     border-radius: 8px;
@@ -138,6 +145,24 @@
                     box-sizing: border-box;
                     outline: none;
                     transition: border-color 0.2s, box-shadow 0.2s;
+                }
+
+                .tw-prompt-select {
+                    width: 100%;
+                    padding: 10px 14px;
+                    border-radius: 8px;
+                    border: 1px solid var(--tw-border);
+                    background: var(--tw-select-bg);
+                    color: var(--tw-select-text);
+                    font-size: 14px;
+                    box-sizing: border-box;
+                    outline: none;
+                    transition: border-color 0.2s, box-shadow 0.2s;
+                }
+
+                .tw-prompt-select option {
+                    background: var(--tw-select-bg);
+                    color: var(--tw-select-text);
                 }
 
                 .tw-prompt-input:focus, .tw-prompt-textarea:focus, .tw-prompt-select:focus {
@@ -231,128 +256,19 @@
             document.head.appendChild(style);
         }
 
-        closePrompt(result = null) {
-            if (!this.isOpen) return;
-            this.isOpen = false;
-            
-            if (result !== null && result !== undefined) {
-                this.lastResult = result;
+        getHoverColor(hex) {
+            let color = hex.replace('#', '');
+            if (color.length === 3) {
+                color = color.split('').map(c => c + c).join('');
             }
-
-            if (this.currentModal) {
-                const modalRef = this.currentModal;
-                modalRef.classList.remove('tw-prompt-visible');
-                setTimeout(() => {
-                    if (modalRef && modalRef.parentNode) {
-                        modalRef.parentNode.removeChild(modalRef);
-                    }
-                }, 250);
-                this.currentModal = null;
-            }
-
-            if (this.resolveCurrent) {
-                const res = this.resolveCurrent;
-                this.resolveCurrent = null;
-                res(result);
-            }
-        }
-
-        createModalBase(message, contentElement, buttons) {
-            return new Promise((resolve) => {
-                if (this.isOpen) {
-                    this.closePrompt(null);
-                }
-
-                this.isOpen = true;
-                this.resolveCurrent = resolve;
-
-                const overlay = document.createElement('div');
-                overlay.className = 'tw-prompt-overlay';
-                overlay.setAttribute('data-theme', this.theme);
-                overlay.style.setProperty('--tw-accent', this.accentColor);
-
-                const modal = document.createElement('div');
-                modal.className = 'tw-prompt-modal';
-
-                const header = document.createElement('div');
-                header.className = 'tw-prompt-header';
-
-                if (this.icon) {
-                    const iconEl = document.createElement('div');
-                    iconEl.className = 'tw-prompt-icon';
-                    iconEl.textContent = this.icon;
-                    header.appendChild(iconEl);
-                }
-
-                const titleEl = document.createElement('h3');
-                titleEl.className = 'tw-prompt-title';
-                titleEl.textContent = this.title;
-                header.appendChild(titleEl);
-
-                modal.appendChild(header);
-
-                if (message) {
-                    const msgEl = document.createElement('p');
-                    msgEl.className = 'tw-prompt-message';
-                    msgEl.textContent = message;
-                    modal.appendChild(msgEl);
-                }
-
-                if (contentElement) {
-                    modal.appendChild(contentElement);
-                }
-
-                const btnContainer = document.createElement('div');
-                btnContainer.className = 'tw-prompt-buttons';
-
-                buttons.forEach(btnInfo => {
-                    const btn = document.createElement('button');
-                    btn.className = `tw-prompt-btn ${btnInfo.primary ? 'tw-prompt-btn-ok' : 'tw-prompt-btn-cancel'}`;
-                    btn.textContent = btnInfo.text;
-                    btn.onclick = () => {
-                        const val = btnInfo.getValue ? btnInfo.getValue() : null;
-                        this.closePrompt(val);
-                    };
-                    btnContainer.appendChild(btn);
-                });
-
-                modal.appendChild(btnContainer);
-                overlay.appendChild(modal);
-                document.body.appendChild(overlay);
-
-                this.currentModal = overlay;
-
-                requestAnimationFrame(() => {
-                    overlay.classList.add('tw-prompt-visible');
-                    const firstInput = modal.querySelector('input, textarea, select, button');
-                    if (firstInput) firstInput.focus();
-                });
-
-                overlay.onclick = (e) => {
-                    if (e.target === overlay) {
-                        this.closePrompt(null);
-                    }
-                };
-
-                const keyHandler = (e) => {
-                    if (!this.isOpen) {
-                        window.removeEventListener('keydown', keyHandler);
-                        return;
-                    }
-                    if (e.key === 'Escape') {
-                        e.preventDefault();
-                        window.removeEventListener('keydown', keyHandler);
-                        this.closePrompt(null);
-                    } else if (e.key === 'Enter') {
-                        if (e.target.tagName === 'TEXTAREA') return;
-                        e.preventDefault();
-                        window.removeEventListener('keydown', keyHandler);
-                        const primaryBtn = btnContainer.querySelector('.tw-prompt-btn-ok');
-                        if (primaryBtn) primaryBtn.click();
-                    }
-                };
-                window.addEventListener('keydown', keyHandler);
-            });
+            const num = parseInt(color, 16);
+            let r = (num >> 16) + 20;
+            let g = ((num >> 8) & 0x00ff) + 20;
+            let b = (num & 0x0000ff) + 20;
+            r = r > 255 ? 255 : r;
+            g = g > 255 ? 255 : g;
+            b = b > 255 ? 255 : b;
+            return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
         }
 
         getInfo() {
@@ -538,8 +454,138 @@
             };
         }
 
+        openModal(message, contentElement, buttons) {
+            return new Promise((resolve) => {
+                if (this.currentModal && this.currentModal.parentNode) {
+                    this.currentModal.parentNode.removeChild(this.currentModal);
+                }
+                if (this.currentResolver) {
+                    const oldRes = this.currentResolver;
+                    this.currentResolver = null;
+                    oldRes(null);
+                }
+
+                const promptId = ++this.currentId;
+                this.isOpen = true;
+                this.currentResolver = resolve;
+
+                const overlay = document.createElement('div');
+                overlay.className = 'tw-prompt-overlay';
+                overlay.setAttribute('data-theme', this.theme);
+                overlay.style.setProperty('--tw-accent', this.accentColor);
+                overlay.style.setProperty('--tw-accent-hover', this.getHoverColor(this.accentColor));
+
+                const modal = document.createElement('div');
+                modal.className = 'tw-prompt-modal';
+
+                const header = document.createElement('div');
+                header.className = 'tw-prompt-header';
+
+                if (this.icon) {
+                    const iconEl = document.createElement('div');
+                    iconEl.className = 'tw-prompt-icon';
+                    iconEl.textContent = this.icon;
+                    header.appendChild(iconEl);
+                }
+
+                const titleEl = document.createElement('h3');
+                titleEl.className = 'tw-prompt-title';
+                titleEl.textContent = this.title;
+                header.appendChild(titleEl);
+
+                modal.appendChild(header);
+
+                if (message) {
+                    const msgEl = document.createElement('p');
+                    msgEl.className = 'tw-prompt-message';
+                    msgEl.textContent = message;
+                    modal.appendChild(msgEl);
+                }
+
+                if (contentElement) {
+                    modal.appendChild(contentElement);
+                }
+
+                const btnContainer = document.createElement('div');
+                btnContainer.className = 'tw-prompt-buttons';
+
+                let settled = false;
+                const closeWith = (val) => {
+                    if (settled || promptId !== this.currentId) return;
+                    settled = true;
+                    this.isOpen = false;
+                    this.currentResolver = null;
+
+                    if (val !== null && val !== undefined) {
+                        this.lastResult = val;
+                    }
+
+                    if (this.currentModal) {
+                        const modalRef = this.currentModal;
+                        modalRef.classList.remove('tw-prompt-visible');
+                        setTimeout(() => {
+                            if (modalRef && modalRef.parentNode) {
+                                modalRef.parentNode.removeChild(modalRef);
+                            }
+                        }, 250);
+                        this.currentModal = null;
+                    }
+
+                    resolve(val);
+                };
+
+                buttons.forEach(btnInfo => {
+                    const btn = document.createElement('button');
+                    btn.className = `tw-prompt-btn ${btnInfo.primary ? 'tw-prompt-btn-ok' : 'tw-prompt-btn-cancel'}`;
+                    btn.textContent = btnInfo.text;
+                    btn.onclick = () => {
+                        const val = btnInfo.getValue ? btnInfo.getValue() : null;
+                        closeWith(val);
+                    };
+                    btnContainer.appendChild(btn);
+                });
+
+                modal.appendChild(btnContainer);
+                overlay.appendChild(modal);
+                document.body.appendChild(overlay);
+
+                this.currentModal = overlay;
+
+                requestAnimationFrame(() => {
+                    overlay.classList.add('tw-prompt-visible');
+                    const firstInput = modal.querySelector('input, textarea, select, button');
+                    if (firstInput) firstInput.focus();
+                });
+
+                overlay.onclick = (e) => {
+                    if (e.target === overlay) {
+                        closeWith(null);
+                    }
+                };
+
+                const keyHandler = (e) => {
+                    if (!this.isOpen || promptId !== this.currentId) {
+                        window.removeEventListener('keydown', keyHandler);
+                        return;
+                    }
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        window.removeEventListener('keydown', keyHandler);
+                        closeWith(null);
+                    } else if (e.key === 'Enter') {
+                        if (e.target.tagName === 'TEXTAREA') return;
+                        e.preventDefault();
+                        window.removeEventListener('keydown', keyHandler);
+                        const primaryBtn = btnContainer.querySelector('.tw-prompt-btn-ok');
+                        if (primaryBtn) primaryBtn.click();
+                    }
+                };
+                window.addEventListener('keydown', keyHandler);
+            });
+        }
+
         confirm(args) {
-            return this.createModalBase(args.MESSAGE, null, [
+            return this.openModal(args.MESSAGE, null, [
                 { text: 'Cancel', primary: false, getValue: () => false },
                 { text: 'OK', primary: true, getValue: () => true }
             ]).then(res => res === true);
@@ -549,18 +595,18 @@
             const input = document.createElement('input');
             input.type = 'text';
             input.className = 'tw-prompt-input';
-            return this.createModalBase(args.MESSAGE, input, [
-                { text: 'Cancel', primary: false, getValue: () => '' },
+            return this.openModal(args.MESSAGE, input, [
+                { text: 'Cancel', primary: false, getValue: () => null },
                 { text: 'OK', primary: true, getValue: () => input.value }
-            ]).then(res => (res === null || res === undefined) ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : String(res));
         }
 
         numberPrompt(args) {
             const input = document.createElement('input');
             input.type = 'number';
             input.className = 'tw-prompt-input';
-            return this.createModalBase(args.MESSAGE, input, [
-                { text: 'Cancel', primary: false, getValue: () => '' },
+            return this.openModal(args.MESSAGE, input, [
+                { text: 'Cancel', primary: false, getValue: () => null },
                 { text: 'OK', primary: true, getValue: () => input.value === '' ? '' : Number(input.value) }
             ]).then(res => (res === null || res === undefined) ? '' : res);
         }
@@ -587,19 +633,19 @@
             container.appendChild(input);
             container.appendChild(preview);
 
-            return this.createModalBase('Choose a colour:', container, [
-                { text: 'Cancel', primary: false, getValue: () => '' },
+            return this.openModal('Choose a colour:', container, [
+                { text: 'Cancel', primary: false, getValue: () => null },
                 { text: 'OK', primary: true, getValue: () => input.value }
-            ]).then(res => (res === null || res === undefined) ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : String(res));
         }
 
         textareaPrompt(args) {
             const textarea = document.createElement('textarea');
             textarea.className = 'tw-prompt-textarea';
-            return this.createModalBase(args.MESSAGE, textarea, [
-                { text: 'Cancel', primary: false, getValue: () => '' },
+            return this.openModal(args.MESSAGE, textarea, [
+                { text: 'Cancel', primary: false, getValue: () => null },
                 { text: 'OK', primary: true, getValue: () => textarea.value }
-            ]).then(res => (res === null || res === undefined) ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : String(res));
         }
 
         choosePrompt(args) {
@@ -612,10 +658,10 @@
                 optEl.textContent = opt.trim();
                 select.appendChild(optEl);
             });
-            return this.createModalBase('Choose an option:', select, [
-                { text: 'Cancel', primary: false, getValue: () => '' },
+            return this.openModal('Choose an option:', select, [
+                { text: 'Cancel', primary: false, getValue: () => null },
                 { text: 'OK', primary: true, getValue: () => select.value }
-            ]).then(res => (res === null || res === undefined) ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : String(res));
         }
 
         sliderPrompt(args) {
@@ -642,8 +688,8 @@
             container.appendChild(slider);
             container.appendChild(valueDisplay);
 
-            return this.createModalBase(args.MESSAGE, container, [
-                { text: 'Cancel', primary: false, getValue: () => '' },
+            return this.openModal(args.MESSAGE, container, [
+                { text: 'Cancel', primary: false, getValue: () => null },
                 { text: 'OK', primary: true, getValue: () => Number(slider.value) }
             ]).then(res => (res === null || res === undefined) ? '' : Number(res));
         }
@@ -654,10 +700,10 @@
             input.className = 'tw-prompt-input';
             const today = new Date().toISOString().split('T')[0];
             input.value = today;
-            return this.createModalBase('Select a date:', input, [
-                { text: 'Cancel', primary: false, getValue: () => '' },
+            return this.openModal('Select a date:', input, [
+                { text: 'Cancel', primary: false, getValue: () => null },
                 { text: 'OK', primary: true, getValue: () => input.value }
-            ]).then(res => (res === null || res === undefined) ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : String(res));
         }
 
         timePrompt() {
@@ -668,10 +714,10 @@
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             input.value = `${hours}:${minutes}`;
-            return this.createModalBase('Select a time:', input, [
-                { text: 'Cancel', primary: false, getValue: () => '' },
+            return this.openModal('Select a time:', input, [
+                { text: 'Cancel', primary: false, getValue: () => null },
                 { text: 'OK', primary: true, getValue: () => input.value }
-            ]).then(res => (res === null || res === undefined) ? '' : res);
+            ]).then(res => (res === null || res === undefined) ? '' : String(res));
         }
 
         setTheme(args) {
@@ -691,7 +737,16 @@
         }
 
         closePromptBlock() {
-            this.closePrompt(null);
+            if (this.currentResolver) {
+                const resFn = this.currentResolver;
+                this.currentResolver = null;
+                this.isOpen = false;
+                if (this.currentModal && this.currentModal.parentNode) {
+                    this.currentModal.parentNode.removeChild(this.currentModal);
+                }
+                this.currentModal = null;
+                resFn(null);
+            }
         }
 
         promptOpen() {
