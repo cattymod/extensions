@@ -62,7 +62,6 @@
         const footerBorder = isDark ? "#444444" : "rgb(221,221,221)";
         const selectBg = isDark ? "#2d2d2d" : "#ffffff";
         const selectText = isDark ? "#ffffff" : "#333333";
-        const hoverColor = getHoverColor(accentColor);
 
         style.textContent = `
         .scratch-modal-overlay {
@@ -189,7 +188,6 @@
             font-size: 13px;
             font-weight: bold;
             color: white;
-            transition: background 0.1s;
         }
 
         .scratch-prompt-btn-cancel {
@@ -198,17 +196,9 @@
             border: 1px solid rgba(0, 0, 0, 0.15);
         }
 
-        .scratch-prompt-btn-cancel:hover {
-            background: #d9d9d9;
-        }
-
         .scratch-prompt-btn-ok {
             background: ${accentColor};
             color: white;
-        }
-
-        .scratch-prompt-btn-ok:hover {
-            background: ${hoverColor};
         }
 
         .scratch-modal-input, .scratch-modal-textarea {
