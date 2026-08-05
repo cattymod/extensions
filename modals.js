@@ -868,9 +868,11 @@
             container.style.display = 'flex';
             container.style.flexDirection = 'column';
             container.style.gap = '8px';
+            container.style.width = '100%';
 
             const sliderContainer = document.createElement('div');
             sliderContainer.className = 'scratch-modal-color-container';
+            sliderContainer.style.width = '100%';
 
             const input = document.createElement('input');
             input.type = 'range';
@@ -879,6 +881,8 @@
             input.max = max;
             input.value = def;
             input.style.accentColor = accentColor;
+            input.style.flex = '1';
+            input.style.padding = '0';
 
             const valDisplay = document.createElement('span');
             valDisplay.textContent = def;
