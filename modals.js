@@ -490,6 +490,7 @@
             return {
                 id: "modals",
                 name: "Modals",
+                docsURI: "https://cattymod.app/docs/extensions/modals",
 
                 color1: "#009ccc",
                 color2: "#0085b3",
