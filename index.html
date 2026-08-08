@@ -239,23 +239,24 @@ a {
 
 <div class="section">
     <div class="extensions">
+        <!-- Modals Extension -->
         <div class="extension">
             <div class="extension-banner">
                 <img class="extension-image" src="https://cattymod.app/extensions/modals.svg" alt="Modals">
                 <div class="extension-buttons">
-                    <button class="btn-cattymod" onclick="openInCattyMod()">
+                    <button class="btn-cattymod" onclick="openInCattyMod('https://cattymod.app/extensions/modals.js')">
                         <i data-lucide="external-link"></i>
                         Open in CattyMod
                     </button>
-                    <button class="btn-sample" onclick="openSampleProject()">
+                    <button class="btn-sample" onclick="openSampleProject('https://cattymod.app/extensions/samples/numberGameModal.sb3')">
                         <i data-lucide="play-circle"></i>
                         Sample Project
                     </button>
-                    <button class="btn-download" onclick="downloadExtension()">
+                    <button class="btn-download" onclick="downloadExtension('https://cattymod.app/extensions/modals.js', 'modals.js')">
                         <i data-lucide="download"></i>
                         Download
                     </button>
-                    <button class="btn-copy" onclick="copyExtensionURL(this)">
+                    <button class="btn-copy" onclick="copyExtensionURL('https://cattymod.app/extensions/modals.js', this)">
                         <i data-lucide="copy"></i>
                         Copy URL
                     </button>
@@ -269,6 +270,52 @@ a {
             <div class="tags">
                 <span class="tag">Unsandboxed</span>
                 <span class="tag">UI</span>
+            </div>
+
+            <div class="compatibility">
+                <a href="https://cattymod.app" target="_blank" title="Works in CattyMod">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg" alt="Works in CattyMod">
+                </a>
+                <a href="https://turbowarp.org" target="_blank" title="Works in TurboWarp">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/tw-avaliable.svg" alt="Works in TurboWarp">
+                </a>
+                <a href="https://penguinmod.com" target="_blank" title="Works in PenguinMod">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/penguin-avaliable.svg" alt="Works in PenguinMod">
+                </a>
+            </div>
+        </div>
+
+        <!-- Python Extension -->
+        <div class="extension">
+            <div class="extension-banner">
+                <img class="extension-image" src="https://cattymod.app/extensions/python.svg" alt="Python">
+                <div class="extension-buttons">
+                    <button class="btn-cattymod" onclick="openInCattyMod('https://cattymod.app/extensions/python.js')">
+                        <i data-lucide="external-link"></i>
+                        Open in CattyMod
+                    </button>
+                    <button class="btn-sample" onclick="openSampleProject('https://cattymod.app/extensions/samples/pythonTest.sb3')">
+                        <i data-lucide="play-circle"></i>
+                        Sample Project
+                    </button>
+                    <button class="btn-download" onclick="downloadExtension('https://cattymod.app/extensions/python.js', 'python.js')">
+                        <i data-lucide="download"></i>
+                        Download
+                    </button>
+                    <button class="btn-copy" onclick="copyExtensionURL('https://cattymod.app/extensions/python.js', this)">
+                        <i data-lucide="copy"></i>
+                        Copy URL
+                    </button>
+                </div>
+            </div>
+
+            <h2>Python</h2>
+
+            <p>Run Python code and integrate Python scripts directly into your projects.</p>
+
+            <div class="tags">
+                <span class="tag">Unsandboxed</span>
+                <span class="tag">Programming</span>
             </div>
 
             <div class="compatibility">
@@ -299,24 +346,22 @@ a {
 // Initialize Lucide icons
 lucide.createIcons();
 
-const extensionURL = "https://cattymod.app/extensions/modals.js";
-
-function openInCattyMod() {
+function openInCattyMod(extensionURL) {
     window.open("https://studio.cattymod.app/editor?extension=" + encodeURIComponent(extensionURL), "_blank");
 }
 
-function openSampleProject() {
-    window.open("https://studio.cattymod.app/editor?project_url=https://cattymod.app/extensions/samples/numberGameModal.sb3", "_blank");
+function openSampleProject(projectURL) {
+    window.open("https://studio.cattymod.app/editor?project_url=" + encodeURIComponent(projectURL), "_blank");
 }
 
-function downloadExtension() {
+function downloadExtension(extensionURL, filename) {
     fetch(extensionURL)
         .then(response => response.blob())
         .then(blob => {
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = "modals.js";
+            link.download = filename;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -324,9 +369,8 @@ function downloadExtension() {
         });
 }
 
-function copyExtensionURL(button) {
+function copyExtensionURL(extensionURL, button) {
     navigator.clipboard.writeText(extensionURL).then(() => {
-        const textSpan = button.lastChild;
         button.innerHTML = '<i data-lucide="check"></i> Copied!';
         lucide.createIcons();
         setTimeout(() => {
