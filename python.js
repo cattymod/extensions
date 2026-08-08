@@ -1,6 +1,6 @@
 // Name: Python
 // ID: python
-// Description: Run Python in Scratch with ease.
+// Description: Run Python code and integrate Python scripts directly into your projects.
 // By: Noahscratch493
 // License: MIT
 // Python Icon from https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg
