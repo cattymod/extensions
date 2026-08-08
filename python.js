@@ -3,6 +3,7 @@
 // Description: Run Python in Scratch with ease.
 // By: Noahscratch493
 // License: MIT
+// Python Icon from https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg
 
 (function (Scratch) {
     "use strict";
