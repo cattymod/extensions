@@ -1,6 +1,6 @@
 // Name: Python
 // ID: python
-// Description: Run Python in Scratch with scripts, packages, and a built-in dark CodeMirror editor.
+// Description: Run Python in Scratch with ease.
 // By: Noahscratch493
 // License: MIT
 
