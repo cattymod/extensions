@@ -184,6 +184,18 @@
                     },
 
                     {
+                        opcode: "uninstallPackage",
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: "Uninstall Python Package [PACKAGE]",
+                        arguments: {
+                            PACKAGE: {
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: "requests"
+                            }
+                        }
+                    },
+
+                    {
                         opcode: "resetPython",
                         blockType: Scratch.BlockType.COMMAND,
                         text: "Reset Python"
@@ -722,6 +734,103 @@
                 this.showOutput(
                     this.lastResponse
                 );
+            }
+        }
+
+        // ========================================================
+        // UNINSTALL PACKAGE
+        // ========================================================
+
+        async uninstallPackage(args) {
+            const packageName =
+                String(
+                    args.PACKAGE ?? ""
+                ).trim();
+
+            if (!packageName) {
+                this.lastResponse =
+                    "Python Error: No package specified.";
+
+                this.showOutput(
+                    this.lastResponse
+                );
+
+                return;
+            }
+
+            try {
+                const pyodide =
+                    await this.loadPyodide();
+
+                await pyodide.loadPackage(
+                    "micropip"
+                );
+
+                const micropip =
+                    pyodide.pyimport(
+                        "micropip"
+                    );
+
+                let uninstalled = false;
+                try {
+                    // Check if micropip supports uninstall or fallback to environment check/pip
+                    if (typeof micropip.uninstall === "function") {
+                        await micropip.uninstall(packageName);
+                        uninstalled = true;
+                    } else {
+                        // Fallback using standard Python subprocess/pip if needed
+                        const output = pyodide.runPython(`
+import subprocess
+import sys
+try:
+    result = subprocess.run([sys.executable, "-m", "pip", "uninstall", "${packageName}", "-y"], capture_output=True, text=True, check=True)
+    "Successfully uninstalled"
+except Exception as e:
+    str(e)
+                        `);
+                        if (output && output.includes("Successfully uninstalled")) {
+                            uninstalled = true;
+                        }
+                    }
+                } catch (err) {
+                    // If package wasn't found or isn't installed
+                    const errStr = err.toString();
+                    if (errStr.includes("not installed") || errStr.includes("Skipping") || errStr.includes("does not exist")) {
+                        this.lastResponse = `Package '${packageName}' doesn't exist or isn't installed.`;
+                        this.showOutput(this.lastResponse);
+                        return;
+                    } else {
+                        throw err;
+                    }
+                } finally {
+                    if (
+                        micropip &&
+                        typeof micropip.destroy ===
+                        "function"
+                    ) {
+                        micropip.destroy();
+                    }
+                }
+
+                // Remove from internal packages array
+                const index = this.packages.indexOf(packageName);
+                if (index !== -1) {
+                    this.packages.splice(index, 1);
+                    this.saveProjectState();
+                }
+
+                this.lastResponse = `Successfully uninstalled ${packageName}.`;
+                this.showOutput(this.lastResponse);
+                this.updatePythonStatus("Python  •  Package removed");
+
+            } catch (error) {
+                const errorMsg = error.message || String(error);
+                if (errorMsg.includes("not installed") || errorMsg.includes("does not exist") || errorMsg.includes("Skipping")) {
+                    this.lastResponse = `Package '${packageName}' doesn't exist or isn't installed.`;
+                } else {
+                    this.lastResponse = `Python Error: The package '${packageName}' doesn't exist or isn't installed.`;
+                }
+                this.showOutput(this.lastResponse);
             }
         }
 
