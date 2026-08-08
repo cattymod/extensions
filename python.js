@@ -139,6 +139,14 @@
             this.startLoading();
         }
 
+        openDocumentation() {
+        window.open(
+            "https://cattymod.app/docs/extensions/python/",
+            "_blank"
+        );
+    }
+
+
         // ========================================================
         // INFO
         // ========================================================
@@ -156,6 +164,11 @@
                 blockIconURI: WHITE_PYTHON_ICON,
 
                 blocks: [
+                    {
+                        blockType: Scratch.BlockType.BUTTON,
+                        text: "Open Documentation",
+                        func: "openDocumentation"
+                    },
                     {
                         opcode: "runPython",
                         blockType: Scratch.BlockType.COMMAND,
