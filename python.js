@@ -134,6 +134,7 @@
             this.installProjectStorage();
             this.loadProjectState();
             this.watchProjectStorage();
+            this.listenForProjectLoad();
 
             this.startLoading();
         }
@@ -228,7 +229,7 @@
         }
 
         // ========================================================
-        // PROJECT STORAGE
+        // PROJECT STORAGE & LOADING LISTENERS
         // ========================================================
 
         installProjectStorage() {
@@ -308,7 +309,11 @@
 
                     if (Object.keys(loadedScripts).length) {
                         this.scripts = loadedScripts;
+                    } else {
+                        this.scripts = { "main.py": 'print("Hello from Python!")\n' };
                     }
+                } else {
+                    this.scripts = { "main.py": 'print("Hello from Python!")\n' };
                 }
 
                 // ----------------------------
@@ -319,6 +324,8 @@
                     this.packages = this.cleanPackageList(
                         storage.packages
                     );
+                } else {
+                    this.packages = [];
                 }
             } catch (error) {
                 console.warn(
@@ -326,6 +333,37 @@
                     error
                 );
             }
+        }
+
+        listenForProjectLoad() {
+            // Listen to VM or Runtime project load events to refresh cleanly without glitches
+            const handleProjectLoaded = () => {
+                // Close active editor window if open to prevent tracking dead references
+                if (this.modal) {
+                    this.closeEditor();
+                }
+
+                // Re-initialize and load states from the newly loaded project storage
+                this.installProjectStorage();
+                this.loadProjectState();
+
+                // If Pyodide is already ready, restore any packages specified in the new project
+                if (this.pyodide && this.ready) {
+                    this.restorePackages();
+                }
+            };
+
+            try {
+                if (this.vm && typeof this.vm.on === "function") {
+                    this.vm.on("PROJECT_LOADED", handleProjectLoaded);
+                }
+            } catch (_) {}
+
+            try {
+                if (this.runtime && typeof this.runtime.on === "function") {
+                    this.runtime.on("PROJECT_LOADED", handleProjectLoaded);
+                }
+            } catch (_) {}
         }
 
         cleanPackageList(packages) {
@@ -677,18 +715,6 @@
                     }
                 }
 
-                // IMPORTANT:
-                // Save the exact package specification.
-                //
-                // Examples:
-                // requests
-                // requests==2.32.3
-                // numpy
-                // https://example.com/package.whl
-                //
-                // It will be installed again when
-                // the project is loaded.
-
                 if (
                     !this.packages.includes(
                         packageName
@@ -699,7 +725,6 @@
                     );
                 }
 
-                // Always save after a successful install.
                 this.saveProjectState();
 
                 this.lastResponse =
@@ -1181,10 +1206,6 @@ os.chdir(_project_path)
                     0 24px 80px rgba(0,0,0,.7);
             `;
 
-            // ----------------------------------------------------
-            // TITLEBAR
-            // ----------------------------------------------------
-
             const titlebar =
                 document.createElement("div");
 
@@ -1251,10 +1272,6 @@ os.chdir(_project_path)
             titlebar.appendChild(title);
             titlebar.appendChild(close);
 
-            // ----------------------------------------------------
-            // BODY
-            // ----------------------------------------------------
-
             const body =
                 document.createElement("div");
 
@@ -1264,10 +1281,6 @@ os.chdir(_project_path)
 
                 display:flex;
             `;
-
-            // ----------------------------------------------------
-            // SIDEBAR
-            // ----------------------------------------------------
 
             const sidebar =
                 document.createElement("div");
@@ -1356,10 +1369,6 @@ os.chdir(_project_path)
                 this.fileList
             );
 
-            // ----------------------------------------------------
-            // RIGHT SIDE
-            // ----------------------------------------------------
-
             const right =
                 document.createElement("div");
 
@@ -1373,10 +1382,6 @@ os.chdir(_project_path)
 
                 background:#1e1e1e;
             `;
-
-            // ----------------------------------------------------
-            // TOOLBAR
-            // ----------------------------------------------------
 
             const toolbar =
                 document.createElement("div");
@@ -1476,10 +1481,6 @@ os.chdir(_project_path)
                 clear
             );
 
-            // ----------------------------------------------------
-            // TABS
-            // ----------------------------------------------------
-
             this.tabsElement =
                 document.createElement("div");
 
@@ -1496,10 +1497,6 @@ os.chdir(_project_path)
                 border-bottom:1px solid #303030;
             `;
 
-            // ----------------------------------------------------
-            // EDITOR HOST
-            // ----------------------------------------------------
-
             this.editorHost =
                 document.createElement("div");
 
@@ -1513,10 +1510,6 @@ os.chdir(_project_path)
 
                 background:#1e1e1e;
             `;
-
-            // ----------------------------------------------------
-            // OUTPUT
-            // ----------------------------------------------------
 
             this.outputPanel =
                 document.createElement("div");
@@ -1615,10 +1608,6 @@ os.chdir(_project_path)
                 this.outputContent
             );
 
-            // ----------------------------------------------------
-            // STATUS
-            // ----------------------------------------------------
-
             this.statusText =
                 document.createElement("div");
 
@@ -1660,10 +1649,6 @@ os.chdir(_project_path)
 
             this.modal = overlay;
         }
-
-        // ========================================================
-        // EDITOR ERROR
-        // ========================================================
 
         showEditorError(message) {
             if (!this.editorHost) {
@@ -1728,10 +1713,6 @@ os.chdir(_project_path)
                 "Python  •  CodeMirror failed to load"
             );
         }
-
-        // ========================================================
-        // WELCOME
-        // ========================================================
 
         showWelcome() {
             this.destroyEditor();
@@ -1822,10 +1803,6 @@ os.chdir(_project_path)
             );
         }
 
-        // ========================================================
-        // CODEMIRROR EDITOR
-        // ========================================================
-
         createEditor() {
             this.destroyEditor();
 
@@ -1881,29 +1858,6 @@ os.chdir(_project_path)
             this.editorContainer =
                 textarea;
 
-            // ====================================================
-            // CORRECT CODEMIRROR 5 DARK THEME
-            // ====================================================
-            //
-            // IMPORTANT:
-            //
-            // CodeMirror turns:
-            //
-            // theme: "python-dark"
-            //
-            // into:
-            //
-            // cm-s-python-dark
-            //
-            // The previous code used:
-            //
-            // .python-codemirror-dark
-            //
-            // which does NOT match CodeMirror's theme class.
-            //
-            // This is the important syntax-highlighting fix.
-            // ====================================================
-
             if (
                 !document.getElementById(
                     "python-codemirror-dark-theme"
@@ -1916,10 +1870,6 @@ os.chdir(_project_path)
                     "python-codemirror-dark-theme";
 
                 style.textContent = `
-                    /*
-                     * CodeMirror base
-                     */
-
                     .cm-s-python-dark.CodeMirror {
                         height:100% !important;
 
@@ -1979,10 +1929,6 @@ os.chdir(_project_path)
                     .CodeMirror-activeline-background {
                         background:#202020 !important;
                     }
-
-                    /*
-                     * Python syntax highlighting
-                     */
 
                     .cm-s-python-dark
                     .cm-keyword {
@@ -2060,10 +2006,6 @@ os.chdir(_project_path)
                         background:transparent !important;
                     }
 
-                    /*
-                     * Matching brackets
-                     */
-
                     .cm-s-python-dark
                     .CodeMirror-matchingbracket {
                         color:#ffffff !important;
@@ -2071,10 +2013,6 @@ os.chdir(_project_path)
                         border-bottom:
                             1px solid #ffffff;
                     }
-
-                    /*
-                     * Scrollbars
-                     */
 
                     .cm-s-python-dark
                     .CodeMirror-vscrollbar::-webkit-scrollbar,
@@ -2105,10 +2043,6 @@ os.chdir(_project_path)
                         background:#555;
                     }
 
-                    /*
-                     * Search selection / selection
-                     */
-
                     .cm-s-python-dark
                     .CodeMirror-searching {
                         background:#613214;
@@ -2128,30 +2062,16 @@ os.chdir(_project_path)
                             name: "python",
                             version: 3
                         },
-
-                        /*
-                         * The CSS above specifically targets
-                         * .cm-s-python-dark.
-                         */
                         theme: "python-dark",
-
                         lineNumbers: true,
-
                         indentUnit: 4,
                         tabSize: 4,
-
                         indentWithTabs: false,
-
                         lineWrapping: false,
-
                         autofocus: true,
-
                         viewportMargin: Infinity,
-
                         matchBrackets: true,
-
                         styleActiveLine: true,
-
                         extraKeys: {
                             "Ctrl-Enter":
                                 () =>
@@ -2163,10 +2083,6 @@ os.chdir(_project_path)
                         }
                     }
                 );
-
-            // ====================================================
-            // AUTO SAVE
-            // ====================================================
 
             this.editor.on(
                 "change",
@@ -2264,10 +2180,6 @@ os.chdir(_project_path)
                     text;
             }
         }
-
-        // ========================================================
-        // FILES
-        // ========================================================
 
         newFile() {
             let number = 1;
@@ -2509,10 +2421,6 @@ os.chdir(_project_path)
             this.refreshTabs();
         }
 
-        // ========================================================
-        // SIDEBAR
-        // ========================================================
-
         refreshSidebar() {
             if (!this.fileList) {
                 return;
@@ -2652,10 +2560,6 @@ os.chdir(_project_path)
                 );
             }
         }
-
-        // ========================================================
-        // TABS
-        // ========================================================
 
         refreshTabs() {
             if (!this.tabsElement) {
@@ -2800,10 +2704,6 @@ os.chdir(_project_path)
             }
         }
 
-        // ========================================================
-        // CLOSE TAB
-        // ========================================================
-
         closeTab(name, event) {
             if (event) {
                 event.stopPropagation();
@@ -2854,10 +2754,6 @@ os.chdir(_project_path)
             this.refreshTabs();
         }
 
-        // ========================================================
-        // OUTPUT
-        // ========================================================
-
         showOutput(text) {
             if (
                 !this.outputPanel ||
@@ -2906,15 +2802,9 @@ os.chdir(_project_path)
             );
         }
 
-        // ========================================================
-        // CLOSE EDITOR
-        // ========================================================
-
         closeEditor() {
             this.saveCurrentEditor();
 
-            // Make absolutely sure scripts AND package
-            // metadata are written before closing.
             this.saveProjectState();
 
             this.destroyEditor();
