@@ -120,6 +120,7 @@
             return {
                 id: "python",
                 name: "Python",
+                docsURI: "https://cattymod.app/docs/extensions/python",
 
                 color1: "#3776AB",
                 color2: "#2B5B84",
@@ -129,11 +130,6 @@
                 blockIconURI: WHITE_PYTHON_ICON,
 
                 blocks: [
-                    {
-                        blockType: Scratch.BlockType.BUTTON,
-                        text: "Open Documentation",
-                        func: "openDocumentation"
-                    },
                     {
                         opcode: "runPython",
                         blockType: Scratch.BlockType.COMMAND,
