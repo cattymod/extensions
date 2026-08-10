@@ -1,8 +1,15 @@
+// Name: JavaScript
+// ID: javascript
+// Description: Run JavaScript commands and more inside of your project.
+// By: Noahscratch493
+// License: MIT
+
 class JavaScriptExtension {
     getInfo() {
         return {
             id: "javascript",
             name: "JavaScript",
+            docsURI: "https://cattymod.app/docs/extensions/javascript",
 
             // Extension colour
             color1: "#BC7FFF",
