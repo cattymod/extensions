@@ -604,9 +604,9 @@
                         }
                     },
                     {
-                        opcode: "colourPicker",
+                        opcode: "colorPicker",
                         blockType: Scratch.BlockType.REPORTER,
-                        text: "colour picker",
+                        text: "color picker",
                         disableMonitor: true
                     },
                     {
@@ -676,7 +676,7 @@
                     {
                         opcode: "setAccent",
                         blockType: Scratch.BlockType.COMMAND,
-                        text: "set accent colour [COLOR]",
+                        text: "set accent color [COLOR]",
                         arguments: {
                             COLOR: {
                                 type: Scratch.ArgumentType.COLOR,
@@ -787,7 +787,7 @@
             return res !== null ? res : 0;
         }
 
-        async colourPicker() {
+        async colorPicker() {
             const container = document.createElement('div');
             container.className = 'scratch-modal-color-container';
 
@@ -810,7 +810,7 @@
             container.appendChild(input);
             container.appendChild(preview);
 
-            const res = await openCustomPrompt('Pick a colour:', container, [
+            const res = await openCustomPrompt('Pick a color:', container, [
                 { text: 'Cancel', value: '#ff0000', primary: false },
                 { text: 'OK', getValue: () => input.value, primary: true }
             ]);
