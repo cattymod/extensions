@@ -170,7 +170,7 @@
                     {
                         opcode: "installPackage",
                         blockType: Scratch.BlockType.COMMAND,
-                        text: "Install Python Package [PACKAGE]",
+                        text: "Add Python Package [PACKAGE]",
                         arguments: {
                             PACKAGE: {
                                 type: Scratch.ArgumentType.STRING,
@@ -182,7 +182,7 @@
                     {
                         opcode: "uninstallPackage",
                         blockType: Scratch.BlockType.COMMAND,
-                        text: "Uninstall Python Package [PACKAGE]",
+                        text: "Remove Python Package [PACKAGE]",
                         arguments: {
                             PACKAGE: {
                                 type: Scratch.ArgumentType.STRING,
