@@ -13,20 +13,37 @@
 <!-- CattyMod Navbar -->
 <script src="https://cattymod.app/assets/navbar.js" defer></script>
 
+<link rel="stylesheet" href="https://cattymod.app/assets/styles.css">
+
 <style>
+
 :root {
     --background: 200 20% 12%;
     --foreground: 0 0% 100%;
     --card: 200 15% 16%;
     --card-foreground: 0 0% 100%;
+    --popover: 200 15% 16%;
+    --popover-foreground: 0 0% 100%;
     --primary: 197 100% 40%;
     --primary-foreground: 0 0% 100%;
     --secondary: 270 38% 49%;
+    --secondary-foreground: 0 0% 100%;
     --muted: 200 15% 20%;
     --muted-foreground: 200 10% 70%;
     --accent: 192 100% 66%;
+    --accent-foreground: 200 20% 12%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
     --border: 200 15% 22%;
+    --input: 200 15% 22%;
+    --ring: 197 100% 40%;
     --radius: 0.5rem;
+    --navbar: 200 20% 15%;
+    --navbar-foreground: 0 0% 100%;
+    --banner: 270 38% 49%;
+    --banner-foreground: 0 0% 100%;
+    --hero: 192 100% 40%;
+    --hero-foreground: 0 0% 100%;
 }
 
 * {
@@ -34,13 +51,22 @@
     border-color: hsl(var(--border));
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     margin: 0;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: ui-sans-serif, system-ui, sans-serif,
-        "Apple Color Emoji", "Segoe UI Emoji",
-        "Segoe UI Symbol", "Noto Color Emoji";
+    font-family:
+        ui-sans-serif,
+        system-ui,
+        sans-serif,
+        "Apple Color Emoji",
+        "Segoe UI Emoji",
+        "Segoe UI Symbol",
+        "Noto Color Emoji";
     line-height: 1.5;
 }
 
@@ -50,20 +76,26 @@ body {
 
 .hero {
     position: relative;
+
     display: flex;
     align-items: center;
     justify-content: center;
+
     min-height: 560px;
+
     overflow: hidden;
+
     padding: 70px 24px;
+
     background:
         linear-gradient(
             135deg,
-            hsl(197 100% 40%),
-            hsl(197 85% 45%) 45%,
-            hsl(192 100% 66%)
+            hsl(var(--primary)),
+            hsl(var(--hero)) 48%,
+            hsl(var(--accent))
         );
-    color: white;
+
+    color: hsl(var(--hero-foreground));
 }
 
 .hero-content {
@@ -74,77 +106,101 @@ body {
     align-items: center;
     justify-content: space-between;
 
-    gap: 56px;
     width: 100%;
     max-width: 1120px;
+
+    gap: 56px;
 }
 
 .hero-text {
-    max-width: 580px;
+    max-width: 600px;
 }
 
 .hero h1 {
     margin: 0;
+
     font-size: 3.7rem;
     line-height: 1.08;
     font-weight: 700;
-    color: white;
+
+    color: hsl(var(--hero-foreground));
 }
 
 .hero p {
     margin: 20px 0 0;
+
     font-size: 1.4rem;
     line-height: 1.5;
     font-weight: 700;
-    color: white;
+
+    color: hsl(var(--hero-foreground));
 }
 
 .hero p a {
-    color: white;
+    color: hsl(var(--hero-foreground));
+
     text-decoration: underline;
     text-decoration-thickness: 2px;
     text-underline-offset: 4px;
+
+    transition: opacity 0.15s ease;
 }
 
 .hero p a:hover {
     opacity: 0.8;
 }
 
-/* Hero video */
+/* =========================================================
+   HERO ICON
+   ========================================================= */
 
-.hero-video {
-    width: 100%;
-    max-width: 520px;
+.hero-icon-wrapper {
+    position: relative;
 
-    overflow: hidden;
-    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    box-shadow:
-        0 25px 50px rgba(0, 0, 0, 0.30),
-        0 0 40px rgba(255, 255, 255, 0.12);
+    width: 260px;
+    height: 260px;
 
-    background: rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
 }
 
-.hero-video video {
-    display: block;
-    width: 100%;
-    height: auto;
+.hero-icon {
+    position: relative;
+    z-index: 5;
+
+    width: 256px;
+    height: 256px;
+
+    color: hsl(var(--hero-foreground));
+
+    filter:
+        drop-shadow(0 25px 35px rgba(0, 0, 0, 0.25))
+        drop-shadow(0 0 30px rgba(255, 255, 255, 0.15));
 }
 
-/* Ambient glow */
+/* =========================================================
+   HERO BUBBLES / AMBIENT GLOWS
+   ========================================================= */
 
 .hero-orb {
     position: absolute;
+
     pointer-events: none;
+
     border-radius: 9999px;
+
     background: rgba(255, 255, 255, 0.13);
+
     filter: blur(40px);
 }
 
 .hero-orb-1 {
     width: 500px;
     height: 500px;
+
     right: -120px;
     top: -120px;
 }
@@ -152,27 +208,58 @@ body {
 .hero-orb-2 {
     width: 400px;
     height: 400px;
+
     right: 100px;
     bottom: -180px;
+
     opacity: 0.7;
 }
 
 .hero-orb-3 {
     width: 600px;
     height: 600px;
+
     right: -200px;
     top: -180px;
+
     background: rgba(255, 255, 255, 0.08);
+
     filter: blur(70px);
 }
 
+.hero-orb-4 {
+    width: 260px;
+    height: 260px;
+
+    left: -120px;
+    bottom: -120px;
+
+    background: rgba(255, 255, 255, 0.08);
+
+    filter: blur(55px);
+}
+
+.hero-orb-5 {
+    width: 160px;
+    height: 160px;
+
+    left: 42%;
+    top: -90px;
+
+    background: rgba(255, 255, 255, 0.07);
+
+    filter: blur(45px);
+}
+
 /* =========================================================
-   INFO
+   INFORMATION
    ========================================================= */
 
 .section {
     max-width: 928px;
+
     margin: 32px auto;
+
     padding: 0 16px;
 }
 
@@ -183,16 +270,21 @@ body {
 
 .infobox {
     padding: 14px 18px;
+
     margin: 14px auto;
+
     border-radius: var(--radius);
 
     background: hsl(var(--card));
+
     border: 1px solid hsl(var(--border));
 
     max-width: 700px;
 
     text-align: left;
+
     font-size: 0.95rem;
+
     color: hsl(var(--muted-foreground));
 }
 
@@ -202,6 +294,7 @@ body {
 
 .warning {
     background: rgba(239, 68, 68, 0.1);
+
     border-color: rgba(239, 68, 68, 0.3);
 }
 
@@ -215,37 +308,51 @@ body {
 
 .extensions {
     display: grid;
+
     grid-template-columns: repeat(3, 1fr);
+
     gap: 16px;
+
     margin: 24px 0;
 }
 
 @media (max-width: 944px) {
+
     .extensions {
         grid-template-columns: repeat(2, 1fr);
     }
+
 }
 
 @media (max-width: 650px) {
+
     .extensions {
         grid-template-columns: 1fr;
     }
+
 }
 
-/* Extension card */
+/* =========================================================
+   EXTENSION CARD
+   ========================================================= */
 
 .extension {
     background: hsl(var(--card));
+
     border: 1px solid hsl(var(--border));
+
     border-radius: var(--radius);
 
     padding: 12px;
+
     overflow: hidden;
 
     text-align: center;
 
     display: flex;
+
     flex-direction: column;
+
     justify-content: space-between;
 
     transition:
@@ -265,18 +372,25 @@ body {
 
 .extension h2 {
     margin: 12px 0 6px;
+
     font-size: 1.25rem;
+
     color: hsl(var(--foreground));
 }
 
 .extension p {
     line-height: 1.45;
+
     font-size: 0.9rem;
+
     color: hsl(var(--muted-foreground));
+
     margin: 0 0 12px 0;
 }
 
-/* Extension banner */
+/* =========================================================
+   EXTENSION BANNER
+   ========================================================= */
 
 .extension-banner {
     position: relative;
@@ -303,15 +417,19 @@ body {
     padding: 8px;
 }
 
-/* Extension hover buttons */
+/* =========================================================
+   EXTENSION HOVER BUTTONS
+   ========================================================= */
 
 .extension-buttons {
     position: absolute;
+
     inset: 0;
 
     display: grid;
 
     grid-template-columns: repeat(2, 1fr);
+
     grid-template-rows: repeat(2, 1fr);
 
     gap: 8px;
@@ -327,6 +445,7 @@ body {
     padding: 12px;
 
     align-items: center;
+
     justify-items: center;
 }
 
@@ -339,6 +458,7 @@ body {
     color: #fff;
 
     border: none;
+
     border-radius: calc(var(--radius) - 2px);
 
     padding: 6px 8px;
@@ -346,6 +466,7 @@ body {
     cursor: pointer;
 
     font-size: 11px;
+
     font-weight: 600;
 
     transition:
@@ -356,9 +477,11 @@ body {
     height: 100%;
 
     display: flex;
+
     flex-direction: column;
 
     align-items: center;
+
     justify-content: center;
 
     gap: 3px;
@@ -373,7 +496,9 @@ body {
     height: 16px;
 }
 
-/* Button variants */
+/* =========================================================
+   BUTTON VARIANTS
+   ========================================================= */
 
 .btn-cattymod {
     background: #0284c7;
@@ -532,14 +657,19 @@ a {
    ========================================================= */
 
 @media (max-width: 800px) {
+
     .hero {
         min-height: auto;
-        padding: 56px 20px;
+
+        padding: 70px 20px;
     }
 
     .hero-content {
         flex-direction: column;
+
         text-align: center;
+
+        gap: 40px;
     }
 
     .hero-text {
@@ -554,20 +684,54 @@ a {
         font-size: 1.15rem;
     }
 
-    .hero-video {
-        max-width: 600px;
+    .hero-icon-wrapper {
+        width: 210px;
+        height: 210px;
     }
+
+    .hero-icon {
+        width: 210px;
+        height: 210px;
+    }
+
 }
 
 @media (max-width: 500px) {
+
+    .hero {
+        padding: 55px 16px;
+    }
+
     .hero h1 {
         font-size: 2rem;
     }
 
-    .hero {
-        padding: 45px 16px;
+    .hero p {
+        font-size: 1.05rem;
     }
+
+    .hero-icon-wrapper {
+        width: 180px;
+        height: 180px;
+    }
+
+    .hero-icon {
+        width: 180px;
+        height: 180px;
+    }
+
+    .hero-orb-1 {
+        width: 350px;
+        height: 350px;
+    }
+
+    .hero-orb-3 {
+        width: 400px;
+        height: 400px;
+    }
+
 }
+
 </style>
 </head>
 
@@ -594,19 +758,34 @@ a {
                     target="_blank"
                     rel="noopener noreferrer"
                 >
-                    CattyMod</a>.
+                    CattyMod
+                </a>.
             </p>
 
         </div>
 
-        <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-blocks"><path d="M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2"/><rect x="14" y="2" width="8" height="8" rx="1"/></svg>
+
+        <!-- Lucide Blocks Icon -->
+
+        <div class="hero-icon-wrapper">
+
+            <i
+                data-lucide="blocks"
+                class="hero-icon"
+            ></i>
+
+        </div>
+
     </div>
 
-    <!-- Ambient glow orbs -->
-    <div class="hero-orb hero-orb-1"></div>
-    <div class="hero-orb hero-orb-2"></div>
-    <div class="hero-orb hero-orb-3"></div>
 
+    <!-- Ambient glow bubbles -->
+
+    <!-- Ambient Glow Orbs -->
+          <div class="pointer-events-none absolute -right-20 -top-20 h-[500px] w-[500px] rounded-full bg-accent/20"></div>
+          <div class="pointer-events-none absolute -bottom-32 right-40 h-[300px] w-[300px] rounded-full bg-primary/20"></div>
+          <div class="pointer-events-none absolute -right-32 -top-32 h-[600px] w-[600px] rounded-full bg-accent/20 blur-3xl"></div>
+          <div class="pointer-events-none absolute -bottom-40 right-32 h-[400px] w-[400px] rounded-full bg-primary/20 blur-2xl"></div>
 </section>
 
 
@@ -715,7 +894,10 @@ a {
 
                 </div>
 
-                <h2>Modals</h2>
+
+                <h2>
+                    Modals
+                </h2>
 
                 <p>
                     Create Scratch 3 style popup windows,
@@ -728,9 +910,17 @@ a {
             <div>
 
                 <div class="tags">
-                    <span class="tag">Unsandboxed</span>
-                    <span class="tag">UI</span>
+
+                    <span class="tag">
+                        Unsandboxed
+                    </span>
+
+                    <span class="tag">
+                        UI
+                    </span>
+
                 </div>
+
 
                 <div class="compatibility">
 
@@ -837,7 +1027,10 @@ a {
 
                 </div>
 
-                <h2>Python</h2>
+
+                <h2>
+                    Python
+                </h2>
 
                 <p>
                     Run Python code and integrate Python scripts
@@ -850,9 +1043,17 @@ a {
             <div>
 
                 <div class="tags">
-                    <span class="tag">Unsandboxed</span>
-                    <span class="tag">Programming</span>
+
+                    <span class="tag">
+                        Unsandboxed
+                    </span>
+
+                    <span class="tag">
+                        Programming
+                    </span>
+
                 </div>
+
 
                 <div class="compatibility">
 
@@ -959,7 +1160,10 @@ a {
 
                 </div>
 
-                <h2>JavaScript</h2>
+
+                <h2>
+                    JavaScript
+                </h2>
 
                 <p>
                     Run JavaScript commands and more inside
@@ -972,9 +1176,17 @@ a {
             <div>
 
                 <div class="tags">
-                    <span class="tag">Unsandboxed</span>
-                    <span class="tag">Programming</span>
+
+                    <span class="tag">
+                        Unsandboxed
+                    </span>
+
+                    <span class="tag">
+                        Programming
+                    </span>
+
                 </div>
+
 
                 <div class="compatibility">
 
@@ -1081,10 +1293,12 @@ a {
 <script>
 
 /* Initialize Lucide icons */
+
 lucide.createIcons();
 
 
 /* Open an extension in CattyMod */
+
 function openInCattyMod(extensionURL) {
 
     window.open(
@@ -1097,6 +1311,7 @@ function openInCattyMod(extensionURL) {
 
 
 /* Open sample project */
+
 function openSampleProject(projectURL) {
 
     window.open(
@@ -1109,6 +1324,7 @@ function openSampleProject(projectURL) {
 
 
 /* Download extension */
+
 function downloadExtension(extensionURL, filename) {
 
     fetch(extensionURL)
@@ -1130,6 +1346,7 @@ function downloadExtension(extensionURL, filename) {
             const link = document.createElement("a");
 
             link.href = url;
+
             link.download = filename;
 
             document.body.appendChild(link);
@@ -1155,6 +1372,7 @@ function downloadExtension(extensionURL, filename) {
 
 
 /* Copy extension URL */
+
 function copyExtensionURL(extensionURL, button) {
 
     navigator.clipboard.writeText(extensionURL)
