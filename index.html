@@ -81,7 +81,9 @@ body {
     align-items: center;
     justify-content: center;
 
-    min-height: 560px;
+    /* Fill the entire screen on first load */
+    min-height: 100svh;
+    height: 100svh;
 
     overflow: hidden;
 
@@ -119,7 +121,7 @@ body {
 .hero h1 {
     margin: 0;
 
-    font-size: 3.7rem;
+    font-size: clamp(2.8rem, 6vw, 5rem);
     line-height: 1.08;
     font-weight: 700;
 
@@ -129,7 +131,7 @@ body {
 .hero p {
     margin: 20px 0 0;
 
-    font-size: 1.4rem;
+    font-size: clamp(1.1rem, 2vw, 1.4rem);
     line-height: 1.5;
     font-weight: 700;
 
@@ -161,8 +163,8 @@ body {
     align-items: center;
     justify-content: center;
 
-    width: 260px;
-    height: 260px;
+    width: 300px;
+    height: 300px;
 
     flex-shrink: 0;
 }
@@ -171,8 +173,8 @@ body {
     position: relative;
     z-index: 5;
 
-    width: 256px;
-    height: 256px;
+    width: 280px;
+    height: 280px;
 
     color: hsl(var(--hero-foreground));
 
@@ -659,9 +661,10 @@ a {
 @media (max-width: 800px) {
 
     .hero {
-        min-height: auto;
+        min-height: 100svh;
+        height: 100svh;
 
-        padding: 70px 20px;
+        padding: 50px 20px;
     }
 
     .hero-content {
@@ -669,7 +672,9 @@ a {
 
         text-align: center;
 
-        gap: 40px;
+        justify-content: center;
+
+        gap: 45px;
     }
 
     .hero-text {
@@ -677,7 +682,7 @@ a {
     }
 
     .hero h1 {
-        font-size: 2.5rem;
+        font-size: clamp(2.3rem, 9vw, 3.5rem);
     }
 
     .hero p {
@@ -685,13 +690,13 @@ a {
     }
 
     .hero-icon-wrapper {
-        width: 210px;
-        height: 210px;
+        width: 230px;
+        height: 230px;
     }
 
     .hero-icon {
-        width: 210px;
-        height: 210px;
+        width: 220px;
+        height: 220px;
     }
 
 }
@@ -699,20 +704,24 @@ a {
 @media (max-width: 500px) {
 
     .hero {
-        padding: 55px 16px;
+        padding: 40px 16px;
     }
 
     .hero h1 {
-        font-size: 2rem;
+        font-size: 2.15rem;
     }
 
     .hero p {
         font-size: 1.05rem;
     }
 
+    .hero-content {
+        gap: 35px;
+    }
+
     .hero-icon-wrapper {
-        width: 180px;
-        height: 180px;
+        width: 190px;
+        height: 190px;
     }
 
     .hero-icon {
@@ -758,11 +767,11 @@ a {
                     target="_blank"
                     rel="noopener noreferrer"
                 >
-                    CattyMod</a>.
+                    CattyMod
+                </a>.
             </p>
 
         </div>
-
 
         <!-- Lucide Blocks Icon -->
 
@@ -778,13 +787,18 @@ a {
     </div>
 
 
-    <!-- Ambient glow bubbles -->
-
     <!-- Ambient Glow Orbs -->
-          <div class="pointer-events-none absolute -right-20 -top-20 h-[500px] w-[500px] rounded-full bg-accent/20"></div>
-          <div class="pointer-events-none absolute -bottom-32 right-40 h-[300px] w-[300px] rounded-full bg-primary/20"></div>
-          <div class="pointer-events-none absolute -right-32 -top-32 h-[600px] w-[600px] rounded-full bg-accent/20 blur-3xl"></div>
-          <div class="pointer-events-none absolute -bottom-40 right-32 h-[400px] w-[400px] rounded-full bg-primary/20 blur-2xl"></div>
+
+    <div class="hero-orb hero-orb-1"></div>
+
+    <div class="hero-orb hero-orb-2"></div>
+
+    <div class="hero-orb hero-orb-3"></div>
+
+    <div class="hero-orb hero-orb-4"></div>
+
+    <div class="hero-orb hero-orb-5"></div>
+
 </section>
 
 
