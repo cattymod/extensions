@@ -1,1424 +1,434 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CattyMod Extension Gallery</title>
-
 <link rel="icon" type="image/x-icon" href="https://studio.cattymod.app/favicon.ico">
-
-<!-- Lucide Icons -->
+<!-- Lucide Icons CDN -->
 <script src="https://unpkg.com/lucide@latest"></script>
-
-<!-- CattyMod Navbar -->
-<script src="https://cattymod.app/assets/navbar.js" defer></script>
-
-<link rel="stylesheet" href="https://cattymod.app/assets/styles.css">
-
 <style>
-
 :root {
-    --background: 200 20% 12%;
-    --foreground: 0 0% 100%;
-    --card: 200 15% 16%;
-    --card-foreground: 0 0% 100%;
-    --popover: 200 15% 16%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 197 100% 40%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 270 38% 49%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 200 15% 20%;
-    --muted-foreground: 200 10% 70%;
-    --accent: 192 100% 66%;
-    --accent-foreground: 200 20% 12%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 200 15% 22%;
-    --input: 200 15% 22%;
-    --ring: 197 100% 40%;
-    --radius: 0.5rem;
-    --navbar: 200 20% 15%;
-    --navbar-foreground: 0 0% 100%;
-    --banner: 270 38% 49%;
-    --banner-foreground: 0 0% 100%;
-    --hero: 192 100% 40%;
-    --hero-foreground: 0 0% 100%;
+    --accent: #4C97FF;
+    --dark-accent: #3378d8;
 }
-
 * {
     box-sizing: border-box;
-    border-color: hsl(var(--border));
 }
-
-html {
-    scroll-behavior: smooth;
-}
-
 body {
     margin: 0;
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family:
-        ui-sans-serif,
-        system-ui,
-        sans-serif,
-        "Apple Color Emoji",
-        "Segoe UI Emoji",
-        "Segoe UI Symbol",
-        "Noto Color Emoji";
-    line-height: 1.5;
+    background: #fff;
+    color: #333;
+    font-family: Helvetica, Arial, sans-serif;
 }
-
-/* =========================================================
-   HERO
-   ========================================================= */
-
-.hero {
-    position: relative;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    /* Fill the entire screen on first load */
-    min-height: 100svh;
-    height: 100svh;
-
-    overflow: hidden;
-
-    padding: 70px 24px;
-
-    background:
-        linear-gradient(
-            135deg,
-            hsl(var(--primary)),
-            hsl(var(--hero)) 48%,
-            hsl(var(--accent))
-        );
-
-    color: hsl(var(--hero-foreground));
-}
-
-.hero-content {
-    position: relative;
-    z-index: 10;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    width: 100%;
-    max-width: 1120px;
-
-    gap: 56px;
-}
-
-.hero-text {
-    max-width: 600px;
-}
-
-.hero h1 {
-    margin: 0;
-
-    font-size: clamp(2.8rem, 6vw, 5rem);
-    line-height: 1.08;
-    font-weight: 700;
-
-    color: hsl(var(--hero-foreground));
-}
-
-.hero p {
-    margin: 20px 0 0;
-
-    font-size: clamp(1.1rem, 2vw, 1.4rem);
-    line-height: 1.5;
-    font-weight: 700;
-
-    color: hsl(var(--hero-foreground));
-}
-
-.hero p a {
-    color: hsl(var(--hero-foreground));
-
-    text-decoration: underline;
-    text-decoration-thickness: 2px;
-    text-underline-offset: 4px;
-
-    transition: opacity 0.15s ease;
-}
-
-.hero p a:hover {
-    opacity: 0.8;
-}
-
-/* =========================================================
-   HERO ICON
-   ========================================================= */
-
-.hero-icon-wrapper {
-    position: relative;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 300px;
-    height: 300px;
-
-    flex-shrink: 0;
-}
-
-.hero-icon {
-    position: relative;
-    z-index: 5;
-
-    width: 280px;
-    height: 280px;
-
-    color: hsl(var(--hero-foreground));
-
-    filter:
-        drop-shadow(0 25px 35px rgba(0, 0, 0, 0.25))
-        drop-shadow(0 0 30px rgba(255, 255, 255, 0.15));
-}
-
-/* =========================================================
-   HERO BUBBLES / AMBIENT GLOWS
-   ========================================================= */
-
-.hero-orb {
-    position: absolute;
-
-    pointer-events: none;
-
-    border-radius: 9999px;
-
-    background: rgba(255, 255, 255, 0.13);
-
-    filter: blur(40px);
-}
-
-.hero-orb-1 {
-    width: 500px;
-    height: 500px;
-
-    right: -120px;
-    top: -120px;
-}
-
-.hero-orb-2 {
-    width: 400px;
-    height: 400px;
-
-    right: 100px;
-    bottom: -180px;
-
-    opacity: 0.7;
-}
-
-.hero-orb-3 {
-    width: 600px;
-    height: 600px;
-
-    right: -200px;
-    top: -180px;
-
-    background: rgba(255, 255, 255, 0.08);
-
-    filter: blur(70px);
-}
-
-.hero-orb-4 {
-    width: 260px;
-    height: 260px;
-
-    left: -120px;
-    bottom: -120px;
-
-    background: rgba(255, 255, 255, 0.08);
-
-    filter: blur(55px);
-}
-
-.hero-orb-5 {
-    width: 160px;
-    height: 160px;
-
-    left: 42%;
-    top: -90px;
-
-    background: rgba(255, 255, 255, 0.07);
-
-    filter: blur(45px);
-}
-
-/* =========================================================
-   INFORMATION
-   ========================================================= */
-
 .section {
     max-width: 928px;
-
-    margin: 32px auto;
-
-    padding: 0 16px;
+    margin: 24px auto;
+    padding: 0 10px;
 }
-
-.info-section {
-    margin-top: 30px;
-    margin-bottom: 30px;
+.header h1 {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    font-size: 2.5em;
+    font-weight: normal;
+    text-align: center;
 }
-
+.header img {
+    width: 56px;
+    height: 56px;
+}
+.header p {
+    line-height: 1.5;
+}
 .infobox {
-    padding: 14px 18px;
-
-    margin: 14px auto;
-
-    border-radius: var(--radius);
-
-    background: hsl(var(--card));
-
-    border: 1px solid hsl(var(--border));
-
-    max-width: 700px;
-
-    text-align: left;
-
-    font-size: 0.95rem;
-
-    color: hsl(var(--muted-foreground));
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 8px;
+    background: rgba(0,195,255,.2);
+    border: 1px solid rgba(0,187,255,.6);
 }
-
-.infobox b {
-    color: hsl(var(--foreground));
-}
-
 .warning {
-    background: rgba(239, 68, 68, 0.1);
-
-    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(255,0,0,.2);
+    border-color: rgba(255,0,0,.5);
 }
-
-.warning b {
-    color: #f87171;
-}
-
-/* =========================================================
-   EXTENSIONS
-   ========================================================= */
-
 .extensions {
     display: grid;
-
     grid-template-columns: repeat(3, 1fr);
-
-    gap: 16px;
-
-    margin: 24px 0;
+    margin: 16px -4px;
 }
-
 @media (max-width: 944px) {
-
     .extensions {
         grid-template-columns: repeat(2, 1fr);
     }
-
 }
-
 @media (max-width: 650px) {
-
     .extensions {
         grid-template-columns: 1fr;
     }
-
 }
-
-/* =========================================================
-   EXTENSION CARD
-   ========================================================= */
-
 .extension {
-    background: hsl(var(--card));
-
-    border: 1px solid hsl(var(--border));
-
-    border-radius: var(--radius);
-
-    padding: 12px;
-
+    background: white;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    margin: 4px;
+    padding: 8px;
     overflow: hidden;
-
     text-align: center;
-
-    display: flex;
-
-    flex-direction: column;
-
-    justify-content: space-between;
-
-    transition:
-        border-color 0.15s ease,
-        transform 0.15s ease,
-        box-shadow 0.15s ease;
 }
-
-.extension:hover {
-    border-color: hsl(var(--primary));
-
-    transform: translateY(-2px);
-
-    box-shadow:
-        0 10px 25px rgba(0, 0, 0, 0.2);
-}
-
 .extension h2 {
-    margin: 12px 0 6px;
-
-    font-size: 1.25rem;
-
-    color: hsl(var(--foreground));
+    margin: 10px 0 5px;
+    font-size: 1.5em;
 }
-
 .extension p {
-    line-height: 1.45;
-
-    font-size: 0.9rem;
-
-    color: hsl(var(--muted-foreground));
-
-    margin: 0 0 12px 0;
+    line-height: 1.5;
 }
-
-/* =========================================================
-   EXTENSION BANNER
-   ========================================================= */
-
 .extension-banner {
     position: relative;
-
-    margin: -12px -12px 0 -12px;
-
-    border-top-left-radius: var(--radius);
-    border-top-right-radius: var(--radius);
-
-    overflow: hidden;
-
-    background: #0f172a;
+    margin: -8px -8px 0;
 }
-
 .extension-image {
     display: block;
-
     width: 100%;
-
     aspect-ratio: 2 / 1;
-
     object-fit: contain;
-
-    padding: 8px;
 }
-
-/* =========================================================
-   EXTENSION HOVER BUTTONS
-   ========================================================= */
-
 .extension-buttons {
     position: absolute;
-
     inset: 0;
-
     display: grid;
-
     grid-template-columns: repeat(2, 1fr);
-
     grid-template-rows: repeat(2, 1fr);
-
     gap: 8px;
-
-    background: rgba(15, 23, 42, 0.85);
-
-    backdrop-filter: blur(4px);
-
+    background: rgba(0,0,0,.6);
     opacity: 0;
-
-    transition: opacity 0.15s ease;
-
+    transition: .15s;
     padding: 12px;
-
     align-items: center;
-
     justify-items: center;
 }
-
 .extension:hover .extension-buttons,
 .extension:focus-within .extension-buttons {
     opacity: 1;
 }
-
 .extension-buttons button {
-    color: #fff;
-
+    color: white;
     border: none;
-
-    border-radius: calc(var(--radius) - 2px);
-
-    padding: 6px 8px;
-
+    border-radius: 8px;
+    padding: 8px 10px;
     cursor: pointer;
-
-    font-size: 11px;
-
-    font-weight: 600;
-
-    transition:
-        background 0.15s ease,
-        transform 0.15s ease;
-
+    font-size: 12px;
+    font-weight: bold;
+    transition: .15s;
     width: 100%;
     height: 100%;
-
     display: flex;
-
     flex-direction: column;
-
     align-items: center;
-
     justify-content: center;
-
-    gap: 3px;
+    gap: 4px;
 }
-
-.extension-buttons button:hover {
-    transform: scale(1.02);
-}
-
 .extension-buttons button i {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
 }
 
-/* =========================================================
-   BUTTON VARIANTS
-   ========================================================= */
-
+/* 4 Unique Button Colors */
 .btn-cattymod {
-    background: #0284c7;
+    background: #4C97FF;
 }
-
 .btn-cattymod:hover {
-    background: #0369a1;
+    background: #3378d8;
 }
 
 .btn-sample {
+    background: #10B981;
+}
+.btn-sample:hover {
     background: #059669;
 }
 
-.btn-sample:hover {
-    background: #047857;
-}
-
 .btn-download {
-    background: #d97706;
+    background: #F59E0B;
 }
-
 .btn-download:hover {
-    background: #b45309;
+    background: #D97706;
 }
 
 .btn-copy {
-    background: #7c3aed;
+    background: #8B5CF6;
 }
-
 .btn-copy:hover {
-    background: #6d28d9;
+    background: #7C3AED;
 }
-
-/* =========================================================
-   TAGS
-   ========================================================= */
 
 .tags {
     display: flex;
-
     justify-content: center;
     align-items: center;
-
     flex-wrap: wrap;
-
-    gap: 6px;
-
-    margin-bottom: 12px;
+    gap: 5px;
+    margin-top: 10px;
 }
-
 .tag {
-    background: hsl(var(--muted));
-
-    color: hsl(var(--accent));
-
-    border-radius: 4px;
-
-    padding: 3px 8px;
-
-    font-size: 11px;
-
-    font-weight: 500;
+    background: #e8f1ff;
+    color: var(--dark-accent);
+    border-radius: 8px;
+    padding: 5px 9px;
+    font-size: 12px;
 }
-
-/* =========================================================
-   COMPATIBILITY
-   ========================================================= */
-
 .compatibility {
     display: flex;
-
     justify-content: center;
     align-items: center;
-
     flex-wrap: wrap;
-
     gap: 8px;
-
-    border-top: 1px solid hsl(var(--border));
-
-    padding-top: 10px;
+    margin-top: 12px;
 }
-
 .compatibility a {
     display: flex;
 }
-
 .compat-tag {
-    height: 24px;
-
-    transition: transform 0.15s ease;
+    height: 28px;
+    transition: transform .15s;
 }
-
 .compat-tag:hover {
     transform: translateY(-2px);
 }
-
-/* =========================================================
-   FOOTER
-   ========================================================= */
-
 .footer {
-    margin-top: 60px;
-
-    padding: 30px 16px;
-
+    margin-top: 40px;
+    padding: 24px 10px;
     text-align: center;
-
-    border-top: 1px solid hsl(var(--border));
-
-    color: hsl(var(--muted-foreground));
-
-    background-color: hsl(var(--card));
+    border-top: 2px solid #ddd;
+    color: #666;
 }
-
-.footer p {
-    margin: 0 0 10px 0;
-
-    font-weight: 600;
-
-    color: hsl(var(--foreground));
-}
-
 .footer nav {
-    display: flex;
-
-    justify-content: center;
-
-    gap: 16px;
-
-    flex-wrap: wrap;
+    margin-top: 10px;
 }
-
 .footer a {
-    color: hsl(var(--muted-foreground));
-
+    margin: 0 12px;
     text-decoration: none;
-
-    font-size: 0.9rem;
-
-    font-weight: 500;
-
-    transition: color 0.15s ease;
+    font-weight: bold;
 }
-
 .footer a:hover {
-    color: hsl(var(--accent));
+    text-decoration: underline;
 }
-
 a {
-    color: hsl(var(--accent));
+    color: #3378d8;
 }
-
-/* =========================================================
-   MOBILE HERO
-   ========================================================= */
-
-@media (max-width: 800px) {
-
-    .hero {
-        min-height: 100svh;
-        height: 100svh;
-
-        padding: 50px 20px;
-    }
-
-    .hero-content {
-        flex-direction: column;
-
-        text-align: center;
-
-        justify-content: center;
-
-        gap: 45px;
-    }
-
-    .hero-text {
-        max-width: 650px;
-    }
-
-    .hero h1 {
-        font-size: clamp(2.3rem, 9vw, 3.5rem);
-    }
-
-    .hero p {
-        font-size: 1.15rem;
-    }
-
-    .hero-icon-wrapper {
-        width: 230px;
-        height: 230px;
-    }
-
-    .hero-icon {
-        width: 220px;
-        height: 220px;
-    }
-
-}
-
-@media (max-width: 500px) {
-
-    .hero {
-        padding: 40px 16px;
-    }
-
-    .hero h1 {
-        font-size: 2.15rem;
-    }
-
-    .hero p {
-        font-size: 1.05rem;
-    }
-
-    .hero-content {
-        gap: 35px;
-    }
-
-    .hero-icon-wrapper {
-        width: 190px;
-        height: 190px;
-    }
-
-    .hero-icon {
-        width: 180px;
-        height: 180px;
-    }
-
-    .hero-orb-1 {
-        width: 350px;
-        height: 350px;
-    }
-
-    .hero-orb-3 {
-        width: 400px;
-        height: 400px;
-    }
-
-}
-
 </style>
 </head>
-
 <body>
+<script src="https://cattymod.app/assets/navbar.js"></script>
 
-<!-- =======================================================
-     HERO
-     ======================================================= -->
-
-<section class="hero">
-
-    <div class="hero-content">
-
-        <div class="hero-text">
-
-            <h1>
-                CattyMod Extension Gallery
-            </h1>
-
-            <p>
-                The official place to find extensions made for
-                <a
-                    href="https://cattymod.app"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    CattyMod</a>.
-            </p>
-
-        </div>
-
-        <!-- Lucide Blocks Icon -->
-
-        <div class="hero-icon-wrapper">
-
-            <i
-                data-lucide="blocks"
-                class="hero-icon"
-            ></i>
-
-        </div>
-
-    </div>
-
-
-    <!-- Ambient Glow Orbs -->
-
-    <div class="hero-orb hero-orb-1"></div>
-
-    <div class="hero-orb hero-orb-2"></div>
-
-    <div class="hero-orb hero-orb-3"></div>
-
-    <div class="hero-orb hero-orb-4"></div>
-
-    <div class="hero-orb hero-orb-5"></div>
-
-</section>
-
-
-<!-- =======================================================
-     INFORMATION
-     ======================================================= -->
-
-<div class="section info-section">
-
+<div class="section header">
+    <h1>
+        <img src="https://cattymod.app/assets/cattymod.svg" alt="CattyMod Icon">
+        CattyMod Extension Gallery
+    </h1>
+    <p>The official place to find extensions made for CattyMod.</p>
     <div class="infobox warning">
-
-        <b>
-            These extensions may not work in Scratch.
-        </b>
-
-        <br>
-
-        Projects using these extensions should be opened in
-        CattyMod or another compatible editor.
-
+        <b>These extensions may not work in Scratch.</b><br>
+        Projects using these extensions should be opened in CattyMod or another compatible editor.
     </div>
-
-
     <div class="infobox">
-
-        <b>
-            Some extensions require unsandboxed mode.
-        </b>
-
-        <br>
-
-        When loading them into other editors, make sure to enable
-        "Run without sandbox".
-
+        <b>Some extensions require unsandboxed mode.</b><br>
+        When loading them into other editors, make sure to enable "Run without sandbox".
     </div>
-
 </div>
-
-
-<!-- =======================================================
-     EXTENSIONS GRID
-     ======================================================= -->
 
 <div class="section">
-
     <div class="extensions">
-
-
-        <!-- =================================================
-             MODALS
-             ================================================= -->
-
+        <!-- Modals Extension -->
         <div class="extension">
-
-            <div>
-
-                <div class="extension-banner">
-
-                    <img
-                        class="extension-image"
-                        src="https://cattymod.app/extensions/modals.svg"
-                        alt="Modals"
-                    >
-
-                    <div class="extension-buttons">
-
-                        <button
-                            class="btn-cattymod"
-                            onclick="openInCattyMod('https://cattymod.app/extensions/modals.js')"
-                        >
-                            <i data-lucide="external-link"></i>
-                            Open in CattyMod
-                        </button>
-
-                        <button
-                            class="btn-sample"
-                            onclick="openSampleProject('https://cattymod.app/extensions/samples/numberGameModal.sb3')"
-                        >
-                            <i data-lucide="play-circle"></i>
-                            Sample Project
-                        </button>
-
-                        <button
-                            class="btn-download"
-                            onclick="downloadExtension(
-                                'https://cattymod.app/extensions/modals.js',
-                                'modals.js'
-                            )"
-                        >
-                            <i data-lucide="download"></i>
-                            Download
-                        </button>
-
-                        <button
-                            class="btn-copy"
-                            onclick="copyExtensionURL(
-                                'https://cattymod.app/extensions/modals.js',
-                                this
-                            )"
-                        >
-                            <i data-lucide="copy"></i>
-                            Copy URL
-                        </button>
-
-                    </div>
-
+            <div class="extension-banner">
+                <img class="extension-image" src="https://cattymod.app/extensions/modals.svg" alt="Modals">
+                <div class="extension-buttons">
+                    <button class="btn-cattymod" onclick="openInCattyMod('https://cattymod.app/extensions/modals.js')">
+                        <i data-lucide="external-link"></i>
+                        Open in CattyMod
+                    </button>
+                    <button class="btn-sample" onclick="openSampleProject('https://cattymod.app/extensions/samples/numberGameModal.sb3')">
+                        <i data-lucide="play-circle"></i>
+                        Sample Project
+                    </button>
+                    <button class="btn-download" onclick="downloadExtension('https://cattymod.app/extensions/modals.js', 'modals.js')">
+                        <i data-lucide="download"></i>
+                        Download
+                    </button>
+                    <button class="btn-copy" onclick="copyExtensionURL('https://cattymod.app/extensions/modals.js', this)">
+                        <i data-lucide="copy"></i>
+                        Copy URL
+                    </button>
                 </div>
-
-
-                <h2>
-                    Modals
-                </h2>
-
-                <p>
-                    Create Scratch 3 style popup windows,
-                    embeds, and interactive prompts.
-                </p>
-
             </div>
 
+            <h2>Modals</h2>
 
-            <div>
+            <p>Create Scratch 3 style popup windows, embeds, and interactive prompts.</p>
 
-                <div class="tags">
-
-                    <span class="tag">
-                        Unsandboxed
-                    </span>
-
-                    <span class="tag">
-                        UI
-                    </span>
-
-                </div>
-
-
-                <div class="compatibility">
-
-                    <a
-                        href="https://cattymod.app"
-                        target="_blank"
-                        title="Works in CattyMod"
-                    >
-                        <img
-                            class="compat-tag"
-                            src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg"
-                            alt="Works in CattyMod"
-                        >
-                    </a>
-
-                    <a
-                        href="https://turbowarp.org"
-                        target="_blank"
-                        title="Works in TurboWarp"
-                    >
-                        <img
-                            class="compat-tag"
-                            src="https://cattymod.app/extensions/tags/tw-avaliable.svg"
-                            alt="Works in TurboWarp"
-                        >
-                    </a>
-
-                    <a
-                        href="https://penguinmod.com"
-                        target="_blank"
-                        title="Works in PenguinMod"
-                    >
-                        <img
-                            class="compat-tag"
-                            src="https://cattymod.app/extensions/tags/penguin-avaliable.svg"
-                            alt="Works in PenguinMod"
-                        >
-                    </a>
-
-                </div>
-
+            <div class="tags">
+                <span class="tag">Unsandboxed</span>
+                <span class="tag">UI</span>
             </div>
 
+            <div class="compatibility">
+                <a href="https://cattymod.app" target="_blank" title="Works in CattyMod">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg" alt="Works in CattyMod">
+                </a>
+                <a href="https://turbowarp.org" target="_blank" title="Works in TurboWarp">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/tw-avaliable.svg" alt="Works in TurboWarp">
+                </a>
+                <a href="https://penguinmod.com" target="_blank" title="Works in PenguinMod">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/penguin-avaliable.svg" alt="Works in PenguinMod">
+                </a>
+            </div>
         </div>
 
-
-        <!-- =================================================
-             PYTHON
-             ================================================= -->
-
+        <!-- Python Extension -->
         <div class="extension">
-
-            <div>
-
-                <div class="extension-banner">
-
-                    <img
-                        class="extension-image"
-                        src="https://cattymod.app/extensions/python.svg"
-                        alt="Python"
-                    >
-
-                    <div class="extension-buttons">
-
-                        <button
-                            class="btn-cattymod"
-                            onclick="openInCattyMod('https://cattymod.app/extensions/python.js')"
-                        >
-                            <i data-lucide="external-link"></i>
-                            Open in CattyMod
-                        </button>
-
-                        <button
-                            class="btn-sample"
-                            onclick="openSampleProject('https://cattymod.app/extensions/samples/pythonTest.sb3')"
-                        >
-                            <i data-lucide="play-circle"></i>
-                            Sample Project
-                        </button>
-
-                        <button
-                            class="btn-download"
-                            onclick="downloadExtension(
-                                'https://cattymod.app/extensions/python.js',
-                                'python.js'
-                            )"
-                        >
-                            <i data-lucide="download"></i>
-                            Download
-                        </button>
-
-                        <button
-                            class="btn-copy"
-                            onclick="copyExtensionURL(
-                                'https://cattymod.app/extensions/python.js',
-                                this
-                            )"
-                        >
-                            <i data-lucide="copy"></i>
-                            Copy URL
-                        </button>
-
-                    </div>
-
+            <div class="extension-banner">
+                <img class="extension-image" src="https://cattymod.app/extensions/python.svg" alt="Python">
+                <div class="extension-buttons">
+                    <button class="btn-cattymod" onclick="openInCattyMod('https://cattymod.app/extensions/python.js')">
+                        <i data-lucide="external-link"></i>
+                        Open in CattyMod
+                    </button>
+                    <button class="btn-sample" onclick="openSampleProject('https://cattymod.app/extensions/samples/pythonTest.sb3')">
+                        <i data-lucide="play-circle"></i>
+                        Sample Project
+                    </button>
+                    <button class="btn-download" onclick="downloadExtension('https://cattymod.app/extensions/python.js', 'python.js')">
+                        <i data-lucide="download"></i>
+                        Download
+                    </button>
+                    <button class="btn-copy" onclick="copyExtensionURL('https://cattymod.app/extensions/python.js', this)">
+                        <i data-lucide="copy"></i>
+                        Copy URL
+                    </button>
                 </div>
-
-
-                <h2>
-                    Python
-                </h2>
-
-                <p>
-                    Run Python code and integrate Python scripts
-                    directly into your projects.
-                </p>
-
             </div>
 
+            <h2>Python</h2>
 
-            <div>
+            <p>Run Python code and integrate Python scripts directly into your projects.</p>
 
-                <div class="tags">
-
-                    <span class="tag">
-                        Unsandboxed
-                    </span>
-
-                    <span class="tag">
-                        Programming
-                    </span>
-
-                </div>
-
-
-                <div class="compatibility">
-
-                    <a
-                        href="https://cattymod.app"
-                        target="_blank"
-                        title="Works in CattyMod"
-                    >
-                        <img
-                            class="compat-tag"
-                            src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg"
-                            alt="Works in CattyMod"
-                        >
-                    </a>
-
-                    <a
-                        href="https://turbowarp.org"
-                        target="_blank"
-                        title="Works in TurboWarp"
-                    >
-                        <img
-                            class="compat-tag"
-                            src="https://cattymod.app/extensions/tags/tw-avaliable.svg"
-                            alt="Works in TurboWarp"
-                        >
-                    </a>
-
-                    <a
-                        href="https://penguinmod.com"
-                        target="_blank"
-                        title="Works in PenguinMod"
-                    >
-                        <img
-                            class="compat-tag"
-                            src="https://cattymod.app/extensions/tags/penguin-avaliable.svg"
-                            alt="Works in PenguinMod"
-                        >
-                    </a>
-
-                </div>
-
+            <div class="tags">
+                <span class="tag">Unsandboxed</span>
+                <span class="tag">Programming</span>
             </div>
 
+            <div class="compatibility">
+                <a href="https://cattymod.app" target="_blank" title="Works in CattyMod">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg" alt="Works in CattyMod">
+                </a>
+                <a href="https://turbowarp.org" target="_blank" title="Works in TurboWarp">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/tw-avaliable.svg" alt="Works in TurboWarp">
+                </a>
+                <a href="https://penguinmod.com" target="_blank" title="Works in PenguinMod">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/penguin-avaliable.svg" alt="Works in PenguinMod">
+                </a>
+            </div>
         </div>
-
-
-        <!-- =================================================
-             JAVASCRIPT
-             ================================================= -->
-
+        <!-- Modals Extension -->
         <div class="extension">
-
-            <div>
-
-                <div class="extension-banner">
-
-                    <img
-                        class="extension-image"
-                        src="https://cattymod.app/extensions/javascript.svg"
-                        alt="JavaScript"
-                    >
-
-                    <div class="extension-buttons">
-
-                        <button
-                            class="btn-cattymod"
-                            onclick="openInCattyMod('https://cattymod.app/extensions/javascript.js')"
-                        >
-                            <i data-lucide="external-link"></i>
-                            Open in CattyMod
-                        </button>
-
-                        <button
-                            class="btn-sample"
-                            onclick="openSampleProject('https://cattymod.app/extensions/samples/javaTest.sb3')"
-                        >
-                            <i data-lucide="play-circle"></i>
-                            Sample Project
-                        </button>
-
-                        <button
-                            class="btn-download"
-                            onclick="downloadExtension(
-                                'https://cattymod.app/extensions/javascript.js',
-                                'javascript.js'
-                            )"
-                        >
-                            <i data-lucide="download"></i>
-                            Download
-                        </button>
-
-                        <button
-                            class="btn-copy"
-                            onclick="copyExtensionURL(
-                                'https://cattymod.app/extensions/javascript.js',
-                                this
-                            )"
-                        >
-                            <i data-lucide="copy"></i>
-                            Copy URL
-                        </button>
-
-                    </div>
-
+            <div class="extension-banner">
+                <img class="extension-image" src="https://cattymod.app/extensions/javascript.svg" alt="Modals">
+                <div class="extension-buttons">
+                    <button class="btn-cattymod" onclick="openInCattyMod('https://cattymod.app/extensions/javascript.js')">
+                        <i data-lucide="external-link"></i>
+                        Open in CattyMod
+                    </button>
+                    <button class="btn-sample" onclick="openSampleProject('https://cattymod.app/extensions/samples/javaTest.sb3')">
+                        <i data-lucide="play-circle"></i>
+                        Sample Project
+                    </button>
+                    <button class="btn-download" onclick="downloadExtension('https://cattymod.app/extensions/javascript.js', 'javascript.js')">
+                        <i data-lucide="download"></i>
+                        Download
+                    </button>
+                    <button class="btn-copy" onclick="copyExtensionURL('https://cattymod.app/extensions/javascript.js', this)">
+                        <i data-lucide="copy"></i>
+                        Copy URL
+                    </button>
                 </div>
-
-
-                <h2>
-                    JavaScript
-                </h2>
-
-                <p>
-                    Run JavaScript commands and more inside
-                    of your project.
-                </p>
-
             </div>
 
+            <h2>JavaScript</h2>
 
-            <div>
+            <p>Run JavaScript commands and more inside of your project.</p>
 
-                <div class="tags">
-
-                    <span class="tag">
-                        Unsandboxed
-                    </span>
-
-                    <span class="tag">
-                        Programming
-                    </span>
-
-                </div>
-
-
-                <div class="compatibility">
-
-                    <a
-                        href="https://cattymod.app"
-                        target="_blank"
-                        title="Works in CattyMod"
-                    >
-                        <img
-                            class="compat-tag"
-                            src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg"
-                            alt="Works in CattyMod"
-                        >
-                    </a>
-
-                    <a
-                        href="https://turbowarp.org"
-                        target="_blank"
-                        title="Works in TurboWarp"
-                    >
-                        <img
-                            class="compat-tag"
-                            src="https://cattymod.app/extensions/tags/tw-avaliable.svg"
-                            alt="Works in TurboWarp"
-                        >
-                    </a>
-
-                    <a
-                        href="https://penguinmod.com"
-                        target="_blank"
-                        title="Works in PenguinMod"
-                    >
-                        <img
-                            class="compat-tag"
-                            src="https://cattymod.app/extensions/tags/penguin-avaliable.svg"
-                            alt="Works in PenguinMod"
-                        >
-                    </a>
-
-                </div>
-
+            <div class="tags">
+                <span class="tag">Unsandboxed</span>
+                <span class="tag">Programming</span>
             </div>
 
+            <div class="compatibility">
+                <a href="https://cattymod.app" target="_blank" title="Works in CattyMod">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg" alt="Works in CattyMod">
+                </a>
+                <a href="https://turbowarp.org" target="_blank" title="Works in TurboWarp">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/tw-avaliable.svg" alt="Works in TurboWarp">
+                </a>
+                <a href="https://penguinmod.com" target="_blank" title="Works in PenguinMod">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/penguin-avaliable.svg" alt="Works in PenguinMod">
+                </a>
+            </div>
         </div>
 
     </div>
-
 </div>
 
-
-<!-- =======================================================
-     FOOTER
-     ======================================================= -->
-
 <footer class="footer">
-
-    <p>
-        CattyMod Extension Gallery
-    </p>
-
+    <p>CattyMod Extension Gallery</p>
     <nav>
-
-        <a
-            href="https://github.com/cattymod/extensions"
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            GitHub
-        </a>
-
-        <a
-            href="https://studio.cattymod.app"
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            Studio
-        </a>
-
-        <a
-            href="https://cattymod.app/docs/extensions/"
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            Docs
-        </a>
-
-        <a
-            href="https://cattymod.app/docs/extensions/credits/"
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            Credits
-        </a>
-
+        <a href="https://github.com/cattymod/extensions" target="_blank">GitHub</a>
+        <a href="https://studio.cattymod.app" target="_blank">Studio</a>
+        <a href="https://cattymod.app/docs/extensions/" target="_blank">Docs</a>
+        <a href="https://cattymod.app/docs/extensions/credits/" target="_blank">Credits</a>
     </nav>
-
 </footer>
 
-
-<!-- =======================================================
-     JAVASCRIPT
-     ======================================================= -->
-
 <script>
-
-/* Initialize Lucide icons */
-
+// Initialize Lucide icons
 lucide.createIcons();
 
-
-/* Open an extension in CattyMod */
-
 function openInCattyMod(extensionURL) {
-
-    window.open(
-        "https://studio.cattymod.app/editor?extension=" +
-        encodeURIComponent(extensionURL),
-        "_blank"
-    );
-
+    window.open("https://studio.cattymod.app/editor?extension=" + encodeURIComponent(extensionURL), "_blank");
 }
-
-
-/* Open sample project */
 
 function openSampleProject(projectURL) {
-
-    window.open(
-        "https://studio.cattymod.app/editor?project_url=" +
-        encodeURIComponent(projectURL),
-        "_blank"
-    );
-
+    window.open("https://studio.cattymod.app/editor?project_url=" + encodeURIComponent(projectURL), "_blank");
 }
-
-
-/* Download extension */
 
 function downloadExtension(extensionURL, filename) {
-
     fetch(extensionURL)
-
-        .then(response => {
-
-            if (!response.ok) {
-                throw new Error("Failed to download extension.");
-            }
-
-            return response.blob();
-
-        })
-
+        .then(response => response.blob())
         .then(blob => {
-
             const url = URL.createObjectURL(blob);
-
             const link = document.createElement("a");
-
             link.href = url;
-
             link.download = filename;
-
             document.body.appendChild(link);
-
             link.click();
-
             link.remove();
-
             URL.revokeObjectURL(url);
-
-        })
-
-        .catch(error => {
-
-            console.error(
-                "Failed to download extension:",
-                error
-            );
-
         });
-
 }
-
-
-/* Copy extension URL */
 
 function copyExtensionURL(extensionURL, button) {
-
-    navigator.clipboard.writeText(extensionURL)
-
-        .then(() => {
-
-            button.innerHTML =
-                '<i data-lucide="check"></i> Copied!';
-
+    navigator.clipboard.writeText(extensionURL).then(() => {
+        button.innerHTML = '<i data-lucide="check"></i> Copied!';
+        lucide.createIcons();
+        setTimeout(() => {
+            button.innerHTML = '<i data-lucide="copy"></i> Copy URL';
             lucide.createIcons();
-
-            setTimeout(() => {
-
-                button.innerHTML =
-                    '<i data-lucide="copy"></i> Copy URL';
-
-                lucide.createIcons();
-
-            }, 1000);
-
-        })
-
-        .catch(error => {
-
-            console.error(
-                "Failed to copy URL:",
-                error
-            );
-
-        });
-
+        }, 1000);
+    }).catch(err => {
+        console.error("Failed to copy URL: ", err);
+    });
 }
-
 </script>
 
 </body>
