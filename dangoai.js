@@ -1,3 +1,9 @@
+// Name: DangoAI
+// ID: dangoai
+// Description: Add AI Chatbots to your CattyMod Projects!
+// By: Noahscratch493
+// License: MIT
+
 (function (Scratch) {
     "use strict";
 
