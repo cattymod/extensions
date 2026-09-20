@@ -217,6 +217,12 @@ body {
 a {
     color: #3378d8;
 }
+
+.btn-sample:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
 </style>
 </head>
 <body>
@@ -331,10 +337,10 @@ a {
                 </a>
             </div>
         </div>
-        <!-- Modals Extension -->
+        <!-- JavaScript Extension -->
         <div class="extension">
             <div class="extension-banner">
-                <img class="extension-image" src="https://cattymod.app/extensions/javascript.svg" alt="Modals">
+                <img class="extension-image" src="https://cattymod.app/extensions/javascript.svg" alt="JavaScript">
                 <div class="extension-buttons">
                     <button class="btn-cattymod" onclick="openInCattyMod('https://cattymod.app/extensions/javascript.js')">
                         <i data-lucide="external-link"></i>
@@ -376,6 +382,52 @@ a {
                 </a>
             </div>
         </div>
+        
+        <!-- DangoAI Extension -->
+        <div class="extension">
+            <div class="extension-banner">
+                <img class="extension-image" src="https://cattymod.app/extensions/dangoai.svg" alt="DangoAI">
+                <div class="extension-buttons">
+                    <button class="btn-cattymod" onclick="openInCattyMod('https://cattymod.app/extensions/dangoai.js')">
+                        <i data-lucide="external-link"></i>
+                        Open in CattyMod
+                    </button>
+                    <button class="btn-sample" disabled>
+    <i data-lucide="play-circle"></i>
+    Sample Project
+</button><button class="btn-download" onclick="downloadExtension('https://cattymod.app/extensions/javascript.js', 'javascript.js')">
+                        <i data-lucide="download"></i>
+                        Download
+                    </button>
+                    <button class="btn-copy" onclick="copyExtensionURL('https://cattymod.app/extensions/javascript.js', this)">
+                        <i data-lucide="copy"></i>
+                        Copy URL
+                    </button>
+                </div>
+            </div>
+
+            <h2>DangoAI</h2>
+
+            <p>Add AI Chatbots to your CattyMod Projects!</p>
+
+            <div class="tags">
+                <span class="tag">Unsandboxed</span>
+                <span class="tag">AI</span>
+            </div>
+
+            <div class="compatibility">
+                <a href="https://cattymod.app" target="_blank" title="Works in CattyMod">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/cattymod-avaliable.svg" alt="Works in CattyMod">
+                </a>
+                <a href="https://turbowarp.org" target="_blank" title="Works in TurboWarp">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/tw-avaliable.svg" alt="Works in TurboWarp">
+                </a>
+                <a href="https://penguinmod.com" target="_blank" title="Works in PenguinMod">
+                    <img class="compat-tag" src="https://cattymod.app/extensions/tags/penguin-avaliable.svg" alt="Works in PenguinMod">
+                </a>
+            </div>
+        </div>
+
 
     </div>
 </div>
