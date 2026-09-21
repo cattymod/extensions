@@ -30,6 +30,9 @@
 
             this.groups = {};
 
+            // Default groupwide prompt.
+            this.groupwidePrompt = "";
+
             this.models = [
                 {
                     name: "Llama 3.2 1B",
@@ -62,7 +65,9 @@
             return {
                 id: "dangoai",
                 name: "DangoAI",
-                docsURI: "https://cattymod.app/docs/extensions/dangoai",
+
+                docsURI:
+                    "https://cattymod.app/docs/extensions/dangoai",
 
                 color1: "#ff9f43",
                 color2: "#f39c12",
@@ -94,6 +99,19 @@
                             MESSAGE: {
                                 type: Scratch.ArgumentType.STRING,
                                 defaultValue: "Hello!"
+                            }
+                        }
+                    },
+
+                    {
+                        opcode: "setGroupwidePrompt",
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: "Set groupwide prompt to [PROMPT]",
+                        arguments: {
+                            PROMPT: {
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue:
+                                    "You are a helpful and friendly AI assistant."
                             }
                         }
                     },
@@ -181,6 +199,7 @@
         async checkWebGPU() {
             if (!navigator.gpu) {
                 this.status = "WebGPU unavailable";
+
                 this.error =
                     "WebGPU is not available in this browser.";
 
@@ -193,6 +212,7 @@
 
                 if (!adapter) {
                     this.status = "WebGPU unavailable";
+
                     this.error =
                         "No WebGPU adapter was found.";
 
@@ -200,8 +220,10 @@
                 }
 
                 return true;
+
             } catch (error) {
                 this.status = "WebGPU error";
+
                 this.error =
                     error?.message || String(error);
 
@@ -229,6 +251,7 @@
                 this.status = "WebLLM loaded";
 
                 return this.webllm;
+
             } catch (error) {
                 this.status = "WebLLM failed";
 
@@ -258,15 +281,26 @@
 
             if (!this.groups[id]) {
                 this.groups[id] = {
-                    personality:
-                        "You are a helpful and friendly AI assistant.",
-
+                    personality: "",
                     messages: []
                 };
             }
 
             return this.groups[id];
         }
+
+        // =========================================================
+        // Groupwide Prompt
+        // =========================================================
+
+        setGroupwidePrompt(args) {
+            this.groupwidePrompt =
+                String(args.PROMPT || "");
+        }
+
+        // =========================================================
+        // Group Personality
+        // =========================================================
 
         setPersonality(args) {
             const group =
@@ -276,12 +310,20 @@
                 String(args.PERSONALITY || "");
         }
 
+        // =========================================================
+        // Clear Group
+        // =========================================================
+
         clearGroup(args) {
             const group =
                 this.getGroup(args.GROUP);
 
             group.messages = [];
         }
+
+        // =========================================================
+        // Clear All Groups
+        // =========================================================
 
         clearAllGroups() {
             this.groups = {};
@@ -305,6 +347,7 @@
                 ) {
                     await this.engine.unload();
                 }
+
             } catch (error) {
                 console.warn(
                     "[DangoAI] Engine unload warning:",
@@ -316,7 +359,7 @@
         }
 
         // =========================================================
-        // Load model
+        // Load Model
         // =========================================================
 
         async setLLM(args) {
@@ -406,12 +449,8 @@
                         }
                     );
 
-                /*
-                 * IMPORTANT:
-                 *
-                 * Do not mark the model ready until
-                 * CreateMLCEngine has completely resolved.
-                 */
+                // Do not mark the model ready until
+                // CreateMLCEngine has completely resolved.
                 this.modelReady = true;
 
                 this.status = "Ready";
@@ -503,12 +542,26 @@
             });
 
             try {
+                // The groupwide prompt ALWAYS applies.
+                // The individual group personality is added
+                // after it when one exists.
+                const systemPrompt = [
+                    this.groupwidePrompt,
+                    group.personality
+                ]
+                    .filter(
+                        prompt =>
+                            prompt &&
+                            prompt.trim()
+                    )
+                    .join("\n\n");
+
                 const messages = [
                     {
                         role: "system",
                         content:
-                            group.personality ||
-                            "You are a helpful AI assistant."
+                            systemPrompt ||
+                            "You are a helpful and friendly AI assistant."
                     },
 
                     ...group.messages
@@ -523,6 +576,7 @@
                             temperature: 0.7,
                             max_tokens: 512
                         });
+
                 } catch (error) {
                     /*
                      * WebLLM sometimes reports that its
@@ -540,6 +594,7 @@
                             )
                     ) {
                         this.modelReady = false;
+
                         this.status =
                             "Model needs reloading";
                     }
