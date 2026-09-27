@@ -19,7 +19,6 @@
             this.recognition = null;
             this.isListening = false;
             this.shouldBeListening = false;
-            this.lastTriggeredTranscript = '';
             this.lastTriggerTime = 0; // Tracks when the wakeword was last triggered
             
             // Initialize Web Speech API Recognition if available
@@ -41,12 +40,21 @@
                 let finalTranscript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
+                        finalTranscript += event.results[i][0].transcript + ' ';
                     } else {
                         interim += event.results[i][0].transcript;
                     }
                 }
-                this.backgroundTranscript = (finalTranscript || interim).trim();
+                
+                // Keep an accumulating buffer of recent speech for wakeword detection
+                const newText = (finalTranscript + interim).trim();
+                if (newText) {
+                    this.backgroundTranscript += ' ' + newText;
+                    // Limit buffer length to prevent memory/string bloat
+                    if (this.backgroundTranscript.length > 300) {
+                        this.backgroundTranscript = this.backgroundTranscript.slice(-200);
+                    }
+                }
             };
 
             this.recognition.onerror = (event) => {
@@ -57,19 +65,14 @@
                 this.isListening = false;
                 // Automatically restart continuous listening if background mode was active
                 if (this.shouldBeListening) {
-                    try {
-                        this.recognition.start();
-                        this.isListening = true;
-                    } catch (e) {
-                        setTimeout(() => {
-                            if (this.shouldBeListening && !this.isListening) {
-                                try {
-                                    this.recognition.start();
-                                    this.isListening = true;
-                                } catch (err) {}
-                            }
-                        }, 300);
-                    }
+                    setTimeout(() => {
+                        if (this.shouldBeListening && !this.isListening) {
+                            try {
+                                this.recognition.start();
+                                this.isListening = true;
+                            } catch (err) {}
+                        }
+                    }, 250);
                 }
             };
         }
@@ -113,7 +116,7 @@
             };
         }
 
-        // Hat block condition checker with a 1-second cooldown
+        // Hat block condition checker with a cooldown
         onWakeword(args) {
             // Ensure background continuous listening is active whenever this hat block is used
             if (!this.shouldBeListening && this.recognition) {
@@ -131,16 +134,12 @@
 
             if (wakeword && currentText.includes(wakeword)) {
                 const now = Date.now();
-                // Check if 1 second (1000 milliseconds) has passed since the last trigger
-                if (now - this.lastTriggerTime > 1000 && this.backgroundTranscript !== this.lastTriggeredTranscript) {
+                // Check if 800ms has passed since the last trigger to prevent double-firing
+                if (now - this.lastTriggerTime > 800) {
                     this.lastTriggerTime = now;
-                    this.lastTriggeredTranscript = this.backgroundTranscript;
-                    
-                    // Clear the background transcript shortly after firing so stale text doesn't linger
-                    setTimeout(() => {
-                        this.backgroundTranscript = '';
-                        this.lastTriggeredTranscript = '';
-                    }, 500);
+                    // Clear the matched portion from the buffer so it doesn't re-trigger immediately
+                    const index = currentText.indexOf(wakeword);
+                    this.backgroundTranscript = this.backgroundTranscript.slice(index + wakeword.length);
                     
                     return true;
                 }
@@ -156,7 +155,6 @@
                     this.shouldBeListening = false;
                     let sessionTranscript = '';
 
-                    // Set continuous to false so the browser automatically stops when you pause speaking
                     this.recognition.continuous = false;
                     this.recognition.interimResults = true;
 
@@ -175,10 +173,7 @@
 
                     this.recognition.onend = () => {
                         this.isListening = false;
-                        // Update the public Speech Text reporter only when the pause finishes
                         this.transcript = sessionTranscript;
-
-                        // Restore background handlers and continuous listening mode
                         this.setupBackgroundHandlers();
                         resolve();
                     };
@@ -193,7 +188,6 @@
                     }
                 };
 
-                // If it was already listening in the background, safely stop it first and wait for it to fully close
                 if (this.isListening) {
                     this.recognition.onend = () => {
                         this.isListening = false;
