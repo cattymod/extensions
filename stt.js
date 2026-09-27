@@ -20,29 +20,21 @@
             this.recognition = null;
             this.isListening = false;
 
-            // Background wakeword listening.
             this.shouldBeListening = false;
-
-            // True while "Listen until Pause" owns recognition.
             this.isListeningUntilPause = false;
-
-            // Scratch project state.
             this.projectStopped = false;
 
-            // Prevent duplicate triggers.
             this.lastTriggerTime = 0;
-
-            // Restart timer.
             this.restartTimer = null;
 
-            // Wakewords that Scratch has asked us to monitor.
+            // Wakewords discovered from the project.
             this.registeredWakewords = new Set();
 
-            // Wakewords detected by the speech recognizer.
-            //
-            // Each detected wakeword gets a token.
-            // The Scratch hat consumes that token.
+            // Number of times each wakeword has been detected.
             this.wakewordTokens = new Map();
+
+            // Number of detections already consumed by Scratch.
+            this.consumedWakewordTokens = new Map();
 
             const SpeechRecognition =
                 window.SpeechRecognition ||
@@ -54,8 +46,6 @@
                 );
                 return;
             }
-
-            this.SpeechRecognition = SpeechRecognition;
 
             this.recognition = new SpeechRecognition();
 
@@ -108,22 +98,112 @@
             this.lastTriggerTime = 0;
 
             this.wakewordTokens.clear();
+            this.consumedWakewordTokens.clear();
 
             this.clearRestartTimer();
 
             this.setupBackgroundHandlers();
 
+            // --------------------------------------------------------
             // IMPORTANT:
             //
-            // Start listening immediately when the green flag is
-            // pressed, so the first wakeword is actually heard.
-            this.shouldBeListening = true;
+            // Find the wakewords BEFORE starting recognition.
+            //
+            // This prevents the first "Dango" from being missed.
+            // --------------------------------------------------------
 
+            this.discoverWakewords();
+
+            // Start listening immediately.
+            this.shouldBeListening = true;
             this.startBackgroundListening();
         }
 
+        // ============================================================
+        // DISCOVER WAKEWORDS FROM THE PROJECT
+        // ============================================================
+
+        discoverWakewords() {
+            this.registeredWakewords.clear();
+
+            const runtime = Scratch.vm.runtime;
+
+            if (!runtime || !runtime.targets) {
+                return;
+            }
+
+            for (const target of runtime.targets) {
+                if (!target || !target.blocks) {
+                    continue;
+                }
+
+                const blocks = target.blocks._blocks;
+
+                if (!blocks) {
+                    continue;
+                }
+
+                for (const id in blocks) {
+                    const block = blocks[id];
+
+                    if (!block) {
+                        continue;
+                    }
+
+                    // Find our wakeword hat.
+                    if (block.opcode !== 'speechtotext_onWakeword') {
+                        continue;
+                    }
+
+                    let wakeword = '';
+
+                    // Scratch stores block inputs/fields differently
+                    // depending on the VM version, so check both.
+                    if (
+                        block.fields &&
+                        block.fields.WORD
+                    ) {
+                        wakeword =
+                            block.fields.WORD.value;
+                    }
+
+                    if (
+                        !wakeword &&
+                        block.inputs &&
+                        block.inputs.WORD
+                    ) {
+                        const input =
+                            block.inputs.WORD;
+
+                        if (
+                            Array.isArray(input) &&
+                            input.length > 0
+                        ) {
+                            wakeword = input[0];
+                        } else if (
+                            typeof input === 'string'
+                        ) {
+                            wakeword = input;
+                        }
+                    }
+
+                    wakeword =
+                        this.normalizeText(wakeword);
+
+                    if (wakeword) {
+                        this.registeredWakewords.add(
+                            wakeword
+                        );
+                    }
+                }
+            }
+        }
+
+        // ============================================================
+        // STOP EVERYTHING
+        // ============================================================
+
         stopAllListening() {
-            // Mark the project stopped BEFORE aborting.
             this.projectStopped = true;
 
             this.shouldBeListening = false;
@@ -132,6 +212,7 @@
             this.backgroundTranscript = '';
 
             this.wakewordTokens.clear();
+            this.consumedWakewordTokens.clear();
 
             this.clearRestartTimer();
 
@@ -154,7 +235,7 @@
         }
 
         // ============================================================
-        // WAKEWORD UTILITIES
+        // TEXT UTILITIES
         // ============================================================
 
         normalizeText(text) {
@@ -178,7 +259,10 @@
             const normalizedWakeword =
                 this.normalizeText(wakeword);
 
-            if (!normalizedText || !normalizedWakeword) {
+            if (
+                !normalizedText ||
+                !normalizedWakeword
+            ) {
                 return false;
             }
 
@@ -195,6 +279,10 @@
             return regex.test(normalizedText);
         }
 
+        // ============================================================
+        // WAKEWORD DETECTION
+        // ============================================================
+
         detectWakewords(text) {
             if (!text) {
                 return;
@@ -202,13 +290,16 @@
 
             const now = Date.now();
 
-            // Prevent the same recognition result from creating
-            // lots of wakeword events.
-            if (now - this.lastTriggerTime < 700) {
+            if (
+                now - this.lastTriggerTime < 700
+            ) {
                 return;
             }
 
-            for (const wakeword of this.registeredWakewords) {
+            for (
+                const wakeword of
+                this.registeredWakewords
+            ) {
                 if (
                     this.containsWakeword(
                         text,
@@ -217,17 +308,18 @@
                 ) {
                     this.lastTriggerTime = now;
 
-                    const oldToken =
-                        this.wakewordTokens.get(wakeword) || 0;
+                    const current =
+                        this.wakewordTokens.get(
+                            wakeword
+                        ) || 0;
 
                     this.wakewordTokens.set(
                         wakeword,
-                        oldToken + 1
+                        current + 1
                     );
 
-                    // Clear the old phrase after detection.
-                    //
-                    // The microphone itself keeps running.
+                    // Clear the phrase so the same word
+                    // cannot immediately trigger again.
                     this.backgroundTranscript = '';
 
                     break;
@@ -236,7 +328,7 @@
         }
 
         // ============================================================
-        // BACKGROUND RECOGNITION
+        // BACKGROUND HANDLERS
         // ============================================================
 
         setupBackgroundHandlers() {
@@ -278,13 +370,14 @@
                 }
 
                 currentChunk =
-                    this.normalizeText(currentChunk);
+                    this.normalizeText(
+                        currentChunk
+                    );
 
                 if (!currentChunk) {
                     return;
                 }
 
-                // Store the speech.
                 this.backgroundTranscript =
                     (
                         this.backgroundTranscript +
@@ -294,22 +387,15 @@
                         .replace(/\s+/g, ' ')
                         .trim();
 
-                // Keep the buffer small.
                 if (
-                    this.backgroundTranscript.length > 500
+                    this.backgroundTranscript.length >
+                    500
                 ) {
                     this.backgroundTranscript =
                         this.backgroundTranscript.slice(-500);
                 }
 
-                // ----------------------------------------------------
-                // IMPORTANT:
-                //
-                // Detect the wakeword RIGHT HERE.
-                //
-                // We don't wait for Scratch to notice it later.
-                // ----------------------------------------------------
-
+                // Detect immediately.
                 this.detectWakewords(
                     this.backgroundTranscript
                 );
@@ -350,14 +436,12 @@
                     return;
                 }
 
-                // Browser stopped recognition.
-                // Automatically bring it back.
                 this.scheduleBackgroundRestart(150);
             };
         }
 
         // ============================================================
-        // BACKGROUND RESTART
+        // RESTART
         // ============================================================
 
         scheduleBackgroundRestart(delay) {
@@ -436,8 +520,6 @@
 
                 this.isListening = true;
             } catch (e) {
-                // Recognition may still be closing from the previous
-                // session. Keep trying instead of disabling wakewords.
                 this.isListening = false;
 
                 this.scheduleBackgroundRestart(250);
@@ -519,11 +601,11 @@
                 return false;
             }
 
-            // Register this wakeword so the speech recognizer knows
-            // what it should be looking for.
+            // Also register it here in case the block was added
+            // dynamically while the project is running.
             this.registeredWakewords.add(wakeword);
 
-            // Make sure background recognition is running.
+            // Make sure recognition is alive.
             if (!this.shouldBeListening) {
                 this.shouldBeListening = true;
                 this.startBackgroundListening();
@@ -531,20 +613,25 @@
                 this.startBackgroundListening();
             }
 
-            // Has the recognizer already detected this wakeword?
-            const token =
-                this.wakewordTokens.get(wakeword) || 0;
+            const detected =
+                this.wakewordTokens.get(
+                    wakeword
+                ) || 0;
 
-            // Each token represents ONE actual wakeword detection.
-            const lastConsumed =
-                this['lastConsumed_' + wakeword] || 0;
+            const consumed =
+                this.consumedWakewordTokens.get(
+                    wakeword
+                ) || 0;
 
-            if (token <= lastConsumed) {
+            if (detected <= consumed) {
                 return false;
             }
 
             // Consume exactly one detection.
-            this['lastConsumed_' + wakeword] = token;
+            this.consumedWakewordTokens.set(
+                wakeword,
+                consumed + 1
+            );
 
             return true;
         }
@@ -565,7 +652,6 @@
                         return;
                     }
 
-                    // Temporarily give recognition to this command.
                     this.shouldBeListening = false;
                     this.isListeningUntilPause = true;
 
@@ -577,7 +663,7 @@
                     this.recognition.interimResults = true;
 
                     // ------------------------------------------------
-                    // COMMAND RESULT
+                    // RESULT
                     // ------------------------------------------------
 
                     this.recognition.onresult = (event) => {
@@ -601,17 +687,21 @@
                             }
                         }
 
-                        if (finalTranscript.trim()) {
+                        if (
+                            finalTranscript.trim()
+                        ) {
                             sessionTranscript =
                                 finalTranscript.trim();
-                        } else if (interim.trim()) {
+                        } else if (
+                            interim.trim()
+                        ) {
                             sessionTranscript =
                                 interim.trim();
                         }
                     };
 
                     // ------------------------------------------------
-                    // COMMAND ERROR
+                    // ERROR
                     // ------------------------------------------------
 
                     this.recognition.onerror = (event) => {
@@ -627,7 +717,7 @@
                     };
 
                     // ------------------------------------------------
-                    // COMMAND END
+                    // END
                     // ------------------------------------------------
 
                     this.recognition.onend = () => {
@@ -647,10 +737,12 @@
                             return;
                         }
 
-                        // Wakeword mode comes back automatically.
+                        // Wakeword listening resumes.
                         this.shouldBeListening = true;
 
-                        this.scheduleBackgroundRestart(150);
+                        this.scheduleBackgroundRestart(
+                            150
+                        );
 
                         resolve();
                     };
@@ -667,7 +759,10 @@
 
                         if (!this.projectStopped) {
                             this.shouldBeListening = true;
-                            this.scheduleBackgroundRestart(250);
+
+                            this.scheduleBackgroundRestart(
+                                250
+                            );
                         }
 
                         resolve();
@@ -675,7 +770,7 @@
                 };
 
                 // ----------------------------------------------------
-                // If background recognition is running, stop it first.
+                // Stop background recognition first.
                 // ----------------------------------------------------
 
                 if (this.isListening) {
