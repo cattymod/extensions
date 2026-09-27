@@ -20,25 +20,29 @@
             this.recognition = null;
             this.isListening = false;
 
-            // Whether background wakeword listening should be active.
+            // Background wakeword listening.
             this.shouldBeListening = false;
 
-            // Whether Listen until Pause currently owns recognition.
+            // True while "Listen until Pause" owns recognition.
             this.isListeningUntilPause = false;
 
-            // Prevent duplicate wakeword triggers.
-            this.lastTriggerTime = 0;
-
-            // True after Scratch stops the project.
+            // Scratch project state.
             this.projectStopped = false;
 
-            // Used to identify the current recognition session.
-            // This prevents callbacks from an old session from
-            // interfering with a newer one.
-            this.recognitionGeneration = 0;
+            // Prevent duplicate triggers.
+            this.lastTriggerTime = 0;
 
-            // Prevent multiple restart timers.
+            // Restart timer.
             this.restartTimer = null;
+
+            // Wakewords that Scratch has asked us to monitor.
+            this.registeredWakewords = new Set();
+
+            // Wakewords detected by the speech recognizer.
+            //
+            // Each detected wakeword gets a token.
+            // The Scratch hat consumes that token.
+            this.wakewordTokens = new Map();
 
             const SpeechRecognition =
                 window.SpeechRecognition ||
@@ -51,6 +55,8 @@
                 return;
             }
 
+            this.SpeechRecognition = SpeechRecognition;
+
             this.recognition = new SpeechRecognition();
 
             this.recognition.lang = 'en-US';
@@ -60,7 +66,7 @@
             this.setupBackgroundHandlers();
 
             // --------------------------------------------------------
-            // SCRATCH PROJECT STOP
+            // PROJECT STOP
             // --------------------------------------------------------
 
             Scratch.vm.runtime.on(
@@ -71,7 +77,7 @@
             );
 
             // --------------------------------------------------------
-            // SCRATCH PROJECT START
+            // PROJECT START
             // --------------------------------------------------------
 
             Scratch.vm.runtime.on(
@@ -91,7 +97,6 @@
                 return;
             }
 
-            // A new green-flag run is a new project session.
             this.projectStopped = false;
 
             this.isListeningUntilPause = false;
@@ -102,24 +107,23 @@
 
             this.lastTriggerTime = 0;
 
+            this.wakewordTokens.clear();
+
             this.clearRestartTimer();
 
-            // Make sure the normal background handlers are installed.
             this.setupBackgroundHandlers();
 
-            // Do NOT start recognition here.
+            // IMPORTANT:
             //
-            // The wakeword hat will request it when the hat is
-            // evaluated. This avoids starting the microphone merely
-            // because the project was started.
+            // Start listening immediately when the green flag is
+            // pressed, so the first wakeword is actually heard.
+            this.shouldBeListening = true;
+
+            this.startBackgroundListening();
         }
 
         stopAllListening() {
-            // Mark stopped BEFORE aborting.
-            //
-            // SpeechRecognition.abort() can cause onend to fire
-            // asynchronously. The onend handler must know that the
-            // project is actually stopped.
+            // Mark the project stopped BEFORE aborting.
             this.projectStopped = true;
 
             this.shouldBeListening = false;
@@ -127,10 +131,9 @@
 
             this.backgroundTranscript = '';
 
-            this.clearRestartTimer();
+            this.wakewordTokens.clear();
 
-            // Invalidate every previous recognition callback.
-            this.recognitionGeneration++;
+            this.clearRestartTimer();
 
             if (this.recognition) {
                 try {
@@ -140,10 +143,7 @@
 
             this.isListening = false;
 
-            // Restore normal handlers.
-            if (this.recognition) {
-                this.setupBackgroundHandlers();
-            }
+            this.setupBackgroundHandlers();
         }
 
         clearRestartTimer() {
@@ -154,7 +154,89 @@
         }
 
         // ============================================================
-        // BACKGROUND WAKEWORD HANDLERS
+        // WAKEWORD UTILITIES
+        // ============================================================
+
+        normalizeText(text) {
+            return String(text)
+                .toLowerCase()
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        escapeRegex(text) {
+            return text.replace(
+                /[.*+?^${}()|[\]\\]/g,
+                '\\$&'
+            );
+        }
+
+        containsWakeword(text, wakeword) {
+            const normalizedText =
+                this.normalizeText(text);
+
+            const normalizedWakeword =
+                this.normalizeText(wakeword);
+
+            if (!normalizedText || !normalizedWakeword) {
+                return false;
+            }
+
+            const escaped =
+                this.escapeRegex(normalizedWakeword);
+
+            const regex = new RegExp(
+                '(^|\\s)' +
+                escaped +
+                '(?=\\s|$)',
+                'i'
+            );
+
+            return regex.test(normalizedText);
+        }
+
+        detectWakewords(text) {
+            if (!text) {
+                return;
+            }
+
+            const now = Date.now();
+
+            // Prevent the same recognition result from creating
+            // lots of wakeword events.
+            if (now - this.lastTriggerTime < 700) {
+                return;
+            }
+
+            for (const wakeword of this.registeredWakewords) {
+                if (
+                    this.containsWakeword(
+                        text,
+                        wakeword
+                    )
+                ) {
+                    this.lastTriggerTime = now;
+
+                    const oldToken =
+                        this.wakewordTokens.get(wakeword) || 0;
+
+                    this.wakewordTokens.set(
+                        wakeword,
+                        oldToken + 1
+                    );
+
+                    // Clear the old phrase after detection.
+                    //
+                    // The microphone itself keeps running.
+                    this.backgroundTranscript = '';
+
+                    break;
+                }
+            }
+        }
+
+        // ============================================================
+        // BACKGROUND RECOGNITION
         // ============================================================
 
         setupBackgroundHandlers() {
@@ -172,17 +254,14 @@
             // --------------------------------------------------------
 
             recognition.onresult = (event) => {
-                // Ignore results when the project is stopped.
                 if (this.projectStopped) {
                     return;
                 }
 
-                // Listen until Pause owns recognition.
                 if (this.isListeningUntilPause) {
                     return;
                 }
 
-                // Background listening isn't wanted.
                 if (!this.shouldBeListening) {
                     return;
                 }
@@ -199,29 +278,41 @@
                 }
 
                 currentChunk =
-                    currentChunk
-                        .toLowerCase()
-                        .trim();
+                    this.normalizeText(currentChunk);
 
                 if (!currentChunk) {
                     return;
                 }
 
-                // Keep accumulating speech so a wakeword can be
-                // detected even if it appears inside a longer phrase.
-                this.backgroundTranscript +=
-                    ' ' + currentChunk;
-
+                // Store the speech.
                 this.backgroundTranscript =
-                    this.backgroundTranscript
+                    (
+                        this.backgroundTranscript +
+                        ' ' +
+                        currentChunk
+                    )
                         .replace(/\s+/g, ' ')
                         .trim();
 
-                // Keep the buffer reasonably small.
-                if (this.backgroundTranscript.length > 500) {
+                // Keep the buffer small.
+                if (
+                    this.backgroundTranscript.length > 500
+                ) {
                     this.backgroundTranscript =
                         this.backgroundTranscript.slice(-500);
                 }
+
+                // ----------------------------------------------------
+                // IMPORTANT:
+                //
+                // Detect the wakeword RIGHT HERE.
+                //
+                // We don't wait for Scratch to notice it later.
+                // ----------------------------------------------------
+
+                this.detectWakewords(
+                    this.backgroundTranscript
+                );
             };
 
             // --------------------------------------------------------
@@ -238,9 +329,6 @@
                         event.error
                     );
                 }
-
-                // Some browsers end recognition after certain errors.
-                // onend will take care of restarting it.
             };
 
             // --------------------------------------------------------
@@ -250,24 +338,20 @@
             recognition.onend = () => {
                 this.isListening = false;
 
-                // Project has stopped.
                 if (this.projectStopped) {
                     return;
                 }
 
-                // Listen until Pause owns the microphone.
                 if (this.isListeningUntilPause) {
                     return;
                 }
 
-                // Background wakeword listening isn't requested.
                 if (!this.shouldBeListening) {
                     return;
                 }
 
-                // Recognition ended unexpectedly.
-                //
-                // Restart it automatically.
+                // Browser stopped recognition.
+                // Automatically bring it back.
                 this.scheduleBackgroundRestart(150);
             };
         }
@@ -297,7 +381,6 @@
                 return;
             }
 
-            // Don't create multiple restart timers.
             if (this.restartTimer !== null) {
                 return;
             }
@@ -353,10 +436,8 @@
 
                 this.isListening = true;
             } catch (e) {
-                // The browser may still be finishing the previous
-                // recognition session.
-                //
-                // Do NOT disable wakeword listening. Just retry.
+                // Recognition may still be closing from the previous
+                // session. Keep trying instead of disabling wakewords.
                 this.isListening = false;
 
                 this.scheduleBackgroundRestart(250);
@@ -423,103 +504,47 @@
                 return false;
             }
 
-            // Never allow an old hat evaluation to revive a
-            // project that has actually been stopped.
             if (this.projectStopped) {
                 return false;
             }
 
-            // Listen until Pause temporarily disables wakewords.
             if (this.isListeningUntilPause) {
                 return false;
             }
 
             const wakeword =
-                String(args.WORD)
-                    .toLowerCase()
-                    .trim();
+                this.normalizeText(args.WORD);
 
             if (!wakeword) {
                 return false;
             }
 
-            // --------------------------------------------------------
-            // IMPORTANT:
-            //
-            // Once the wakeword system is enabled, it stays enabled.
-            //
-            // Triggering the wakeword DOES NOT set
-            // shouldBeListening to false.
-            // --------------------------------------------------------
+            // Register this wakeword so the speech recognizer knows
+            // what it should be looking for.
+            this.registeredWakewords.add(wakeword);
 
+            // Make sure background recognition is running.
             if (!this.shouldBeListening) {
                 this.shouldBeListening = true;
-
                 this.startBackgroundListening();
             } else if (!this.isListening) {
-                // Recognition may have ended by itself.
-                // Make sure it comes back.
                 this.startBackgroundListening();
             }
 
-            const currentText =
-                this.backgroundTranscript;
+            // Has the recognizer already detected this wakeword?
+            const token =
+                this.wakewordTokens.get(wakeword) || 0;
 
-            if (!currentText) {
+            // Each token represents ONE actual wakeword detection.
+            const lastConsumed =
+                this['lastConsumed_' + wakeword] || 0;
+
+            if (token <= lastConsumed) {
                 return false;
             }
 
-            // Use word boundaries when possible.
-            //
-            // This prevents something like "computer" accidentally
-            // matching the middle of another word.
-            const escapedWakeword =
-                wakeword.replace(
-                    /[.*+?^${}()|[\]\\]/g,
-                    '\\$&'
-                );
-
-            const wakewordRegex =
-                new RegExp(
-                    '(^|\\s)' +
-                    escapedWakeword +
-                    '(?=\\s|$)',
-                    'i'
-                );
-
-            if (!wakewordRegex.test(currentText)) {
-                return false;
-            }
-
-            const now = Date.now();
-
-            // Prevent the same recognition result from triggering
-            // the hat repeatedly.
-            if (
-                now - this.lastTriggerTime < 1000
-            ) {
-                return false;
-            }
-
-            this.lastTriggerTime = now;
-
-            // --------------------------------------------------------
-            // IMPORTANT:
-            //
-            // Clear the old phrase, BUT KEEP THE MICROPHONE RUNNING.
-            //
-            // This is what allows:
-            //
-            // "computer"
-            // -> trigger
-            //
-            // "computer"
-            // -> trigger again
-            //
-            // without stopping the project.
-            // --------------------------------------------------------
-
-            this.backgroundTranscript = '';
+            // Consume exactly one detection.
+            this['lastConsumed_' + wakeword] = token;
 
             return true;
         }
@@ -540,8 +565,7 @@
                         return;
                     }
 
-                    // Wakeword temporarily gives control to
-                    // Listen until Pause.
+                    // Temporarily give recognition to this command.
                     this.shouldBeListening = false;
                     this.isListeningUntilPause = true;
 
@@ -549,10 +573,12 @@
 
                     let sessionTranscript = '';
 
-                    // Stop any previous background recognition
-                    // session before taking ownership.
                     this.recognition.continuous = false;
                     this.recognition.interimResults = true;
+
+                    // ------------------------------------------------
+                    // COMMAND RESULT
+                    // ------------------------------------------------
 
                     this.recognition.onresult = (event) => {
                         let interim = '';
@@ -575,7 +601,6 @@
                             }
                         }
 
-                        // Prefer final speech.
                         if (finalTranscript.trim()) {
                             sessionTranscript =
                                 finalTranscript.trim();
@@ -584,6 +609,10 @@
                                 interim.trim();
                         }
                     };
+
+                    // ------------------------------------------------
+                    // COMMAND ERROR
+                    // ------------------------------------------------
 
                     this.recognition.onerror = (event) => {
                         if (
@@ -597,6 +626,10 @@
                         }
                     };
 
+                    // ------------------------------------------------
+                    // COMMAND END
+                    // ------------------------------------------------
+
                     this.recognition.onend = () => {
                         this.isListening = false;
                         this.isListeningUntilPause = false;
@@ -604,11 +637,8 @@
                         this.transcript =
                             sessionTranscript;
 
-                        // Remove anything left over from the
-                        // previous wakeword session.
                         this.backgroundTranscript = '';
 
-                        // Restore normal background handlers.
                         this.setupBackgroundHandlers();
 
                         if (this.projectStopped) {
@@ -617,11 +647,9 @@
                             return;
                         }
 
-                        // Wakeword listening automatically resumes.
+                        // Wakeword mode comes back automatically.
                         this.shouldBeListening = true;
 
-                        // Give the browser a moment to completely
-                        // close the previous recognition session.
                         this.scheduleBackgroundRestart(150);
 
                         resolve();
@@ -639,7 +667,6 @@
 
                         if (!this.projectStopped) {
                             this.shouldBeListening = true;
-
                             this.scheduleBackgroundRestart(250);
                         }
 
@@ -648,13 +675,10 @@
                 };
 
                 // ----------------------------------------------------
-                // Stop background recognition first.
+                // If background recognition is running, stop it first.
                 // ----------------------------------------------------
 
                 if (this.isListening) {
-                    const oldOnEnd =
-                        this.recognition.onend;
-
                     this.recognition.onend = () => {
                         this.isListening = false;
 
@@ -663,8 +687,6 @@
                             return;
                         }
 
-                        // Now that background recognition has
-                        // actually ended, start the command session.
                         startSession();
                     };
 
@@ -705,9 +727,6 @@
 
             this.clearRestartTimer();
 
-            // Invalidate old callbacks.
-            this.recognitionGeneration++;
-
             if (this.recognition) {
                 try {
                     this.recognition.abort();
@@ -716,10 +735,7 @@
 
             this.isListening = false;
 
-            // Restore normal handlers.
-            if (this.recognition) {
-                this.setupBackgroundHandlers();
-            }
+            this.setupBackgroundHandlers();
         }
     }
 
