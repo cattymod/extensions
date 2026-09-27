@@ -78,6 +78,7 @@
             return {
                 id: 'speechtotext',
                 name: 'Speech to Text',
+                docsURI: `https://cattymod.app/docs/extensions/stt`,
                 color1: '#CF63CF', // Primary accent color
                 color2: '#B84CB8', // Darker border shade
                 color3: '#E07CE0', // Highlight shade
