@@ -15,6 +15,7 @@
     class SpeechToTextExtension {
         constructor() {
             this.transcript = '';
+            this.backgroundTranscript = '';
             this.recognition = null;
             this.isListening = false;
             this.shouldBeListening = false;
@@ -25,49 +26,52 @@
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognition) {
                 this.recognition = new SpeechRecognition();
-                this.recognition.continuous = true; // Keep listening continuously in the background
-                this.recognition.interimResults = true;
                 this.recognition.lang = 'en-US';
-
-                this.recognition.onresult = (event) => {
-                    let interim = '';
-                    let finalTranscript = '';
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript;
-                        } else {
-                            interim += event.results[i][0].transcript;
-                        }
-                    }
-                    
-                    const fullText = (finalTranscript || interim).trim();
-                    this.transcript = fullText;
-                };
-
-                this.recognition.onerror = (event) => {
-                    console.error('Speech recognition error', event.error);
-                };
-
-                this.recognition.onend = () => {
-                    this.isListening = false;
-                    // Automatically restart continuous listening if it was active and not manually stopped
-                    if (this.shouldBeListening) {
-                        try {
-                            this.recognition.start();
-                            this.isListening = true;
-                        } catch (e) {
-                            setTimeout(() => {
-                                if (this.shouldBeListening && !this.isListening) {
-                                    try {
-                                        this.recognition.start();
-                                        this.isListening = true;
-                                    } catch (err) {}
-                                }
-                            }, 300);
-                        }
-                    }
-                };
+                this.setupBackgroundHandlers();
             }
+        }
+
+        setupBackgroundHandlers() {
+            if (!this.recognition) return;
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
+
+            this.recognition.onresult = (event) => {
+                let interim = '';
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interim += event.results[i][0].transcript;
+                    }
+                }
+                this.backgroundTranscript = (finalTranscript || interim).trim();
+            };
+
+            this.recognition.onerror = (event) => {
+                console.error('Speech recognition error', event.error);
+            };
+
+            this.recognition.onend = () => {
+                this.isListening = false;
+                // Automatically restart continuous listening if background mode was active
+                if (this.shouldBeListening) {
+                    try {
+                        this.recognition.start();
+                        this.isListening = true;
+                    } catch (e) {
+                        setTimeout(() => {
+                            if (this.shouldBeListening && !this.isListening) {
+                                try {
+                                    this.recognition.start();
+                                    this.isListening = true;
+                                } catch (err) {}
+                            }
+                        }, 300);
+                    }
+                }
+            };
         }
 
         getInfo() {
@@ -122,18 +126,18 @@
             }
 
             const wakeword = String(args.WORD).toLowerCase().trim();
-            const currentText = this.transcript.toLowerCase();
+            const currentText = (this.backgroundTranscript || '').toLowerCase();
 
             if (wakeword && currentText.includes(wakeword)) {
                 const now = Date.now();
                 // Check if 1 second (1000 milliseconds) has passed since the last trigger
-                if (now - this.lastTriggerTime > 1000 && this.transcript !== this.lastTriggeredTranscript) {
+                if (now - this.lastTriggerTime > 1000 && this.backgroundTranscript !== this.lastTriggeredTranscript) {
                     this.lastTriggerTime = now;
-                    this.lastTriggeredTranscript = this.transcript;
+                    this.lastTriggeredTranscript = this.backgroundTranscript;
                     
-                    // Clear the transcript shortly after firing so stale text doesn't linger
+                    // Clear the background transcript shortly after firing so stale text doesn't linger
                     setTimeout(() => {
-                        this.transcript = '';
+                        this.backgroundTranscript = '';
                         this.lastTriggeredTranscript = '';
                     }, 500);
                     
@@ -145,26 +149,63 @@
 
         listenUntilPause() {
             if (!this.recognition) return Promise.resolve();
-            
+
             return new Promise((resolve) => {
-                if (this.isListening) {
-                    this.recognition.stop();
-                }
+                const startSession = () => {
+                    this.shouldBeListening = false;
+                    let sessionTranscript = '';
 
-                this.shouldBeListening = false;
-                this.transcript = '';
-                this.isListening = true;
+                    // Set continuous to false so the browser automatically stops when you pause speaking
+                    this.recognition.continuous = false;
+                    this.recognition.interimResults = true;
 
-                this.recognition.onend = () => {
-                    this.isListening = false;
-                    resolve();
+                    this.recognition.onresult = (event) => {
+                        let interim = '';
+                        let finalTranscript = '';
+                        for (let i = event.resultIndex; i < event.results.length; ++i) {
+                            if (event.results[i].isFinal) {
+                                finalTranscript += event.results[i][0].transcript;
+                            } else {
+                                interim += event.results[i][0].transcript;
+                            }
+                        }
+                        sessionTranscript = (finalTranscript || interim).trim();
+                    };
+
+                    this.recognition.onend = () => {
+                        this.isListening = false;
+                        // Update the public Speech Text reporter only when the pause finishes
+                        this.transcript = sessionTranscript;
+
+                        // Restore background handlers and continuous listening mode
+                        this.setupBackgroundHandlers();
+                        resolve();
+                    };
+
+                    this.isListening = true;
+                    try {
+                        this.recognition.start();
+                    } catch (e) {
+                        this.isListening = false;
+                        this.setupBackgroundHandlers();
+                        resolve();
+                    }
                 };
 
-                try {
-                    this.recognition.start();
-                } catch (e) {
-                    this.isListening = false;
-                    resolve();
+                // If it was already listening in the background, safely stop it first and wait for it to fully close
+                if (this.isListening) {
+                    this.recognition.onend = () => {
+                        this.isListening = false;
+                        startSession();
+                    };
+                    try {
+                        this.recognition.stop();
+                    } catch (e) {
+                        this.isListening = false;
+                        startSession();
+                    }
+                } else {
+                    startSession();
                 }
             });
         }
