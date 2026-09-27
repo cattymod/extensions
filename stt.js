@@ -104,14 +104,8 @@
 
             this.setupBackgroundHandlers();
 
-            // --------------------------------------------------------
-            // IMPORTANT:
-            //
-            // Find the wakewords BEFORE starting recognition.
-            //
-            // This prevents the first "Dango" from being missed.
-            // --------------------------------------------------------
-
+            // Keep whatever wakewords were already registered, 
+            // and discover any current ones as a fallback.
             this.discoverWakewords();
 
             // Start listening immediately.
@@ -124,8 +118,6 @@
         // ============================================================
 
         discoverWakewords() {
-            this.registeredWakewords.clear();
-
             const runtime = Scratch.vm.runtime;
 
             if (!runtime || !runtime.targets) {
@@ -146,25 +138,17 @@
                 for (const id in blocks) {
                     const block = blocks[id];
 
-                    if (!block) {
-                        continue;
-                    }
-
-                    // Find our wakeword hat.
-                    if (block.opcode !== 'speechtotext_onWakeword') {
+                    if (!block || block.opcode !== 'speechtotext_onWakeword') {
                         continue;
                     }
 
                     let wakeword = '';
 
-                    // Scratch stores block inputs/fields differently
-                    // depending on the VM version, so check both.
                     if (
                         block.fields &&
                         block.fields.WORD
                     ) {
-                        wakeword =
-                            block.fields.WORD.value;
+                        wakeword = block.fields.WORD.value;
                     }
 
                     if (
@@ -172,8 +156,7 @@
                         block.inputs &&
                         block.inputs.WORD
                     ) {
-                        const input =
-                            block.inputs.WORD;
+                        const input = block.inputs.WORD;
 
                         if (
                             Array.isArray(input) &&
@@ -187,13 +170,10 @@
                         }
                     }
 
-                    wakeword =
-                        this.normalizeText(wakeword);
+                    wakeword = this.normalizeText(wakeword);
 
                     if (wakeword) {
-                        this.registeredWakewords.add(
-                            wakeword
-                        );
+                        this.registeredWakewords.add(wakeword);
                     }
                 }
             }
@@ -601,8 +581,8 @@
                 return false;
             }
 
-            // Also register it here in case the block was added
-            // dynamically while the project is running.
+            // FIX: Always register/ensure the wake word is tracked 
+            // whenever Scratch polls this hat block.
             this.registeredWakewords.add(wakeword);
 
             // Make sure recognition is alive.
