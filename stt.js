@@ -16,10 +16,21 @@
         constructor() {
             this.transcript = '';
             this.backgroundTranscript = '';
+
             this.recognition = null;
             this.isListening = false;
+
+            // Whether background wakeword listening should be active.
             this.shouldBeListening = false;
+
+            // Whether Listen until Pause is currently active.
+            this.isListeningUntilPause = false;
+
             this.lastTriggerTime = 0;
+
+            // Used to prevent old recognition callbacks from
+            // restarting recognition after the project was stopped.
+            this.projectStopped = false;
 
             const SpeechRecognition =
                 window.SpeechRecognition ||
@@ -33,11 +44,20 @@
                 this.recognition.interimResults = true;
 
                 this.setupBackgroundHandlers();
+
+                // Stop microphone recognition when Scratch stops
+                // all scripts in the project.
+                Scratch.vm.runtime.on(
+                    'PROJECT_STOP_ALL',
+                    () => {
+                        this.stopAllListening();
+                    }
+                );
             }
         }
 
         // ------------------------------------------------------------
-        // BACKGROUND WAKEWORD LISTENING
+        // BACKGROUND WAKEWORD HANDLERS
         // ------------------------------------------------------------
 
         setupBackgroundHandlers() {
@@ -47,6 +67,16 @@
             this.recognition.interimResults = true;
 
             this.recognition.onresult = (event) => {
+                // If the project was stopped or Listen until Pause
+                // is active, don't process background results.
+                if (
+                    this.projectStopped ||
+                    this.isListeningUntilPause ||
+                    !this.shouldBeListening
+                ) {
+                    return;
+                }
+
                 let currentChunk = '';
 
                 for (
@@ -54,20 +84,26 @@
                     i < event.results.length;
                     ++i
                 ) {
-                    currentChunk += event.results[i][0].transcript;
+                    currentChunk +=
+                        event.results[i][0].transcript;
                 }
 
-                currentChunk = currentChunk
-                    .toLowerCase()
-                    .trim();
+                currentChunk =
+                    currentChunk
+                        .toLowerCase()
+                        .trim();
 
                 if (currentChunk) {
-                    this.backgroundTranscript += ' ' + currentChunk;
+                    this.backgroundTranscript +=
+                        ' ' + currentChunk;
+
                     this.backgroundTranscript =
                         this.backgroundTranscript.trim();
 
-                    // Prevent the buffer from becoming huge.
-                    if (this.backgroundTranscript.length > 300) {
+                    // Keep the buffer reasonably small.
+                    if (
+                        this.backgroundTranscript.length > 300
+                    ) {
                         this.backgroundTranscript =
                             this.backgroundTranscript.slice(-300);
                     }
@@ -75,7 +111,7 @@
             };
 
             this.recognition.onerror = (event) => {
-                // These are normal/frequent browser recognition errors.
+                // Don't report normal browser recognition errors.
                 if (
                     event.error !== 'no-speech' &&
                     event.error !== 'aborted'
@@ -90,23 +126,43 @@
             this.recognition.onend = () => {
                 this.isListening = false;
 
-                // Only restart if background wakeword listening
-                // is supposed to be active.
+                // NEVER restart if the project was stopped.
+                if (this.projectStopped) {
+                    return;
+                }
+
+                // NEVER restart background listening while
+                // Listen until Pause is using recognition.
+                if (this.isListeningUntilPause) {
+                    return;
+                }
+
+                // Restart background recognition if it should
+                // still be active.
                 if (this.shouldBeListening) {
                     this.startBackgroundListening();
                 }
             };
         }
 
+        // ------------------------------------------------------------
+        // START BACKGROUND LISTENING
+        // ------------------------------------------------------------
+
         startBackgroundListening() {
             if (!this.recognition) return;
 
-            // Already running.
-            if (this.isListening) return;
+            // Project has been stopped.
+            if (this.projectStopped) return;
 
-            // Do not start if something explicitly disabled
-            // background listening.
+            // Listen until Pause has priority.
+            if (this.isListeningUntilPause) return;
+
+            // Background listening isn't requested.
             if (!this.shouldBeListening) return;
+
+            // Already listening.
+            if (this.isListening) return;
 
             this.recognition.continuous = true;
             this.recognition.interimResults = true;
@@ -115,37 +171,46 @@
                 this.recognition.start();
                 this.isListening = true;
             } catch (e) {
-                // The browser can briefly consider recognition
-                // "busy" after a previous session ended.
+                // The browser can briefly still consider the
+                // previous recognition session active.
+
                 setTimeout(() => {
                     if (
-                        this.shouldBeListening &&
-                        !this.isListening
+                        this.projectStopped ||
+                        this.isListeningUntilPause ||
+                        !this.shouldBeListening ||
+                        this.isListening
                     ) {
-                        try {
-                            this.recognition.start();
-                            this.isListening = true;
-                        } catch (err) {
-                            // Try again later.
-                            setTimeout(() => {
-                                if (
-                                    this.shouldBeListening &&
-                                    !this.isListening
-                                ) {
-                                    try {
-                                        this.recognition.start();
-                                        this.isListening = true;
-                                    } catch (ignored) {}
-                                }
-                            }, 500);
-                        }
+                        return;
+                    }
+
+                    try {
+                        this.recognition.start();
+                        this.isListening = true;
+                    } catch (err) {
+                        // One more attempt.
+                        setTimeout(() => {
+                            if (
+                                this.projectStopped ||
+                                this.isListeningUntilPause ||
+                                !this.shouldBeListening ||
+                                this.isListening
+                            ) {
+                                return;
+                            }
+
+                            try {
+                                this.recognition.start();
+                                this.isListening = true;
+                            } catch (ignored) {}
+                        }, 500);
                     }
                 }, 100);
             }
         }
 
         // ------------------------------------------------------------
-        // SCRATCH BLOCKS
+        // SCRATCH INFO
         // ------------------------------------------------------------
 
         getInfo() {
@@ -167,7 +232,8 @@
                         text: 'on wakeword [WORD]',
                         arguments: {
                             WORD: {
-                                type: Scratch.ArgumentType.STRING,
+                                type:
+                                    Scratch.ArgumentType.STRING,
                                 defaultValue: 'computer'
                             }
                         }
@@ -203,7 +269,16 @@
                 return false;
             }
 
-            // If wakeword listening isn't active, start it.
+            // A new project run can use the wakeword again.
+            this.projectStopped = false;
+
+            // Listen until Pause must NOT allow the wakeword
+            // to run while it is active.
+            if (this.isListeningUntilPause) {
+                return false;
+            }
+
+            // Start background recognition if necessary.
             if (!this.shouldBeListening) {
                 this.shouldBeListening = true;
                 this.startBackgroundListening();
@@ -223,16 +298,13 @@
             ) {
                 const now = Date.now();
 
-                // Prevent the same word from triggering
-                // repeatedly in a very short period.
+                // Prevent repeated triggers from the same phrase.
                 if (
                     now - this.lastTriggerTime > 600
                 ) {
                     this.lastTriggerTime = now;
 
-                    // Remove the detected speech so the
-                    // same wakeword doesn't immediately
-                    // trigger again.
+                    // Clear the detected phrase.
                     this.backgroundTranscript = '';
 
                     return true;
@@ -252,12 +324,10 @@
             }
 
             return new Promise((resolve) => {
-
                 const startSession = () => {
-                    // IMPORTANT:
-                    // Wakeword listening is disabled while
-                    // Listen until Pause is active.
+                    // Wakeword is disabled while this block runs.
                     this.shouldBeListening = false;
+                    this.isListeningUntilPause = true;
 
                     let sessionTranscript = '';
 
@@ -284,7 +354,7 @@
                             }
                         }
 
-                        // Keep the newest available text.
+                        // Prefer final speech when available.
                         sessionTranscript =
                             (
                                 finalTranscript ||
@@ -306,22 +376,36 @@
 
                     this.recognition.onend = () => {
                         this.isListening = false;
+                        this.isListeningUntilPause = false;
 
                         this.transcript =
                             sessionTranscript;
 
-                        // Clear any old wakeword text.
+                        // Remove old wakeword text.
                         this.backgroundTranscript = '';
+
+                        // If the project was stopped while the
+                        // block was running, DON'T restart.
+                        if (this.projectStopped) {
+                            this.shouldBeListening = false;
+
+                            this.setupBackgroundHandlers();
+
+                            resolve();
+                            return;
+                        }
 
                         // Restore background handlers.
                         this.setupBackgroundHandlers();
 
-                        // Wakeword listening resumes ONLY
-                        // after Listen until Pause has ended.
+                        // Wakeword listening resumes after
+                        // Listen until Pause ends.
                         this.shouldBeListening = true;
 
                         setTimeout(() => {
                             if (
+                                !this.projectStopped &&
+                                !this.isListeningUntilPause &&
                                 this.shouldBeListening &&
                                 !this.isListening
                             ) {
@@ -338,25 +422,36 @@
                         this.recognition.start();
                     } catch (e) {
                         this.isListening = false;
+                        this.isListeningUntilPause = false;
 
                         this.setupBackgroundHandlers();
 
-                        this.shouldBeListening = true;
+                        if (!this.projectStopped) {
+                            this.shouldBeListening = true;
 
-                        setTimeout(() => {
-                            this.startBackgroundListening();
-                        }, 100);
+                            setTimeout(() => {
+                                this.startBackgroundListening();
+                            }, 100);
+                        }
 
                         resolve();
                     }
                 };
 
-                // If background recognition is currently active,
-                // stop it before starting the one-shot session.
+                // If background recognition is running,
+                // stop it before starting Listen until Pause.
                 if (this.isListening) {
-
                     this.recognition.onend = () => {
                         this.isListening = false;
+
+                        // If the project was stopped while
+                        // stopping recognition, don't start
+                        // Listen until Pause.
+                        if (this.projectStopped) {
+                            resolve();
+                            return;
+                        }
+
                         startSession();
                     };
 
@@ -364,9 +459,13 @@
                         this.recognition.stop();
                     } catch (e) {
                         this.isListening = false;
-                        startSession();
-                    }
 
+                        if (this.projectStopped) {
+                            resolve();
+                        } else {
+                            startSession();
+                        }
+                    }
                 } else {
                     startSession();
                 }
@@ -387,20 +486,54 @@
 
         cancelListening() {
             this.shouldBeListening = false;
+            this.isListeningUntilPause = false;
             this.backgroundTranscript = '';
 
-            if (
-                this.recognition &&
-                this.isListening
-            ) {
+            if (this.recognition) {
                 try {
                     this.recognition.abort();
                 } catch (e) {}
+            }
 
-                this.isListening = false;
+            this.isListening = false;
+
+            // Restore the background handlers.
+            if (this.recognition) {
+                this.setupBackgroundHandlers();
+            }
+        }
+
+        // ------------------------------------------------------------
+        // PROJECT STOP CLEANUP
+        // ------------------------------------------------------------
+
+        stopAllListening() {
+            // Mark the project as stopped BEFORE aborting recognition.
+            // This is important because abort() can cause onend to fire.
+            this.projectStopped = true;
+
+            this.shouldBeListening = false;
+            this.isListeningUntilPause = false;
+            this.backgroundTranscript = '';
+
+            if (this.recognition) {
+                try {
+                    this.recognition.abort();
+                } catch (e) {}
+            }
+
+            this.isListening = false;
+
+            // Restore normal handlers so the extension is ready
+            // for the next project run.
+            if (this.recognition) {
+                this.setupBackgroundHandlers();
             }
         }
     }
 
-    Scratch.extensions.register(new SpeechToTextExtension());
+    Scratch.extensions.register(
+        new SpeechToTextExtension()
+    );
+
 })(Scratch);
