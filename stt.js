@@ -19,9 +19,8 @@
             this.recognition = null;
             this.isListening = false;
             this.shouldBeListening = false;
-            this.lastTriggerTime = 0; // Tracks when the wakeword was last triggered
+            this.lastTriggerTime = 0;
             
-            // Initialize Web Speech API Recognition if available
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognition) {
                 this.recognition = new SpeechRecognition();
@@ -36,43 +35,44 @@
             this.recognition.interimResults = true;
 
             this.recognition.onresult = (event) => {
-                let interim = '';
-                let finalTranscript = '';
+                let currentChunk = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript + ' ';
-                    } else {
-                        interim += event.results[i][0].transcript;
-                    }
+                    currentChunk += event.results[i][0].transcript;
                 }
                 
-                // Keep an accumulating buffer of recent speech for wakeword detection
-                const newText = (finalTranscript + interim).trim();
-                if (newText) {
-                    this.backgroundTranscript += ' ' + newText;
-                    // Limit buffer length to prevent memory/string bloat
-                    if (this.backgroundTranscript.length > 300) {
-                        this.backgroundTranscript = this.backgroundTranscript.slice(-200);
-                    }
-                }
+                // Keep the rolling buffer clean and updated with recent speech
+                this.backgroundTranscript = currentChunk.toLowerCase().trim();
             };
 
             this.recognition.onerror = (event) => {
-                console.error('Speech recognition error', event.error);
+                // Ignore 'no-speech' errors as they happen frequently during pauses
+                if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                    console.error('Speech recognition error:', event.error);
+                }
             };
 
             this.recognition.onend = () => {
                 this.isListening = false;
-                // Automatically restart continuous listening if background mode was active
+                // Instantly restart if background listening is supposed to be active
                 if (this.shouldBeListening) {
                     setTimeout(() => {
                         if (this.shouldBeListening && !this.isListening) {
                             try {
                                 this.recognition.start();
                                 this.isListening = true;
-                            } catch (err) {}
+                            } catch (err) {
+                                // Retry shortly if browser is busy
+                                setTimeout(() => {
+                                    if (this.shouldBeListening && !this.isListening) {
+                                        try {
+                                            this.recognition.start();
+                                            this.isListening = true;
+                                        } catch (e) {}
+                                    }
+                                }, 500);
+                            }
                         }
-                    }, 250);
+                    }, 100);
                 }
             };
         }
@@ -82,9 +82,9 @@
                 id: 'speechtotext',
                 name: 'Speech to Text',
                 docsURI: `https://cattymod.app/docs/extensions/stt`,
-                color1: '#CF63CF', // Primary accent color
-                color2: '#B84CB8', // Darker border shade
-                color3: '#E07CE0', // Highlight shade
+                color1: '#CF63CF',
+                color2: '#B84CB8',
+                color3: '#E07CE0',
                 blocks: [
                     {
                         opcode: 'onWakeword',
@@ -116,9 +116,8 @@
             };
         }
 
-        // Hat block condition checker with a cooldown
         onWakeword(args) {
-            // Ensure background continuous listening is active whenever this hat block is used
+            // Ensure background listener is running whenever this hat block is active in the project
             if (!this.shouldBeListening && this.recognition) {
                 this.shouldBeListening = true;
                 if (!this.isListening) {
@@ -130,17 +129,15 @@
             }
 
             const wakeword = String(args.WORD).toLowerCase().trim();
-            const currentText = (this.backgroundTranscript || '').toLowerCase();
+            const currentText = this.backgroundTranscript;
 
             if (wakeword && currentText.includes(wakeword)) {
                 const now = Date.now();
-                // Check if 800ms has passed since the last trigger to prevent double-firing
-                if (now - this.lastTriggerTime > 800) {
+                // 600ms cooldown to prevent multi-triggering on the same spoken phrase
+                if (now - this.lastTriggerTime > 600) {
                     this.lastTriggerTime = now;
-                    // Clear the matched portion from the buffer so it doesn't re-trigger immediately
-                    const index = currentText.indexOf(wakeword);
-                    this.backgroundTranscript = this.backgroundTranscript.slice(index + wakeword.length);
-                    
+                    // Clear the buffer so it doesn't loop-trigger on the same sentence
+                    this.backgroundTranscript = '';
                     return true;
                 }
             }
