@@ -21,7 +21,6 @@
             this.isListeningUntilPause = false;
             this.projectStopped = false;
 
-            // Stores which words were triggered since the last Scratch poll
             this.triggeredWakewords = new Set();
             this.registeredWakewords = new Set();
 
@@ -34,13 +33,6 @@
                 return;
             }
 
-            this.recognition = new SpeechRecognition();
-            this.recognition.lang = 'en-US';
-            this.recognition.continuous = true;
-            this.recognition.interimResults = true;
-
-            this.setupListeners();
-
             Scratch.vm.runtime.on('PROJECT_STOP_ALL', () => {
                 this.stopAll();
             });
@@ -51,7 +43,6 @@
         }
 
         startSession() {
-            if (!this.recognition) return;
             this.projectStopped = false;
             this.isListeningUntilPause = false;
             this.transcript = '';
@@ -111,10 +102,19 @@
                 .trim();
         }
 
-        setupListeners() {
-            if (!this.recognition) return;
+        createRecognition() {
+            const SpeechRecognition =
+                window.SpeechRecognition ||
+                window.webkitSpeechRecognition;
 
-            this.recognition.onresult = (event) => {
+            if (!SpeechRecognition) return null;
+
+            const rec = new SpeechRecognition();
+            rec.lang = 'en-US';
+            rec.continuous = true;
+            rec.interimResults = true;
+
+            rec.onresult = (event) => {
                 if (this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening) {
                     return;
                 }
@@ -127,9 +127,7 @@
                 const normalizedSpeech = this.normalize(spokenText);
                 if (!normalizedSpeech) return;
 
-                // Check against all registered wakewords
                 for (const word of this.registeredWakewords) {
-                    // Match whole words or phrases flexibly
                     const regex = new RegExp(`(^|\\s)${word}(\\s|$)`, 'i');
                     if (regex.test(normalizedSpeech)) {
                         this.triggeredWakewords.add(word);
@@ -137,34 +135,46 @@
                 }
             };
 
-            this.recognition.onerror = (event) => {
+            rec.onerror = (event) => {
                 if (event.error !== 'no-speech' && event.error !== 'aborted') {
                     console.warn('Speech recognition error:', event.error);
                 }
             };
 
-            this.recognition.onend = () => {
+            rec.onend = () => {
                 this.isListening = false;
                 if (this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening) {
                     return;
                 }
-                // Automatically restart recognition to keep it listening continuously
+                // Recreate and restart fresh instance to bypass browser freezing bug
                 setTimeout(() => {
                     this.startListening();
-                }, 50);
+                }, 100);
             };
+
+            return rec;
         }
 
         startListening() {
-            if (!this.recognition || this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening || this.isListening) {
+            if (this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening || this.isListening) {
                 return;
             }
+
+            if (this.recognition) {
+                try {
+                    this.recognition.abort();
+                } catch (e) {}
+            }
+
+            this.recognition = this.createRecognition();
+            if (!this.recognition) return;
+
             try {
                 this.recognition.start();
                 this.isListening = true;
             } catch (e) {
                 this.isListening = false;
-                setTimeout(() => this.startListening(), 200);
+                setTimeout(() => this.startListening(), 300);
             }
         }
 
@@ -220,7 +230,6 @@
                 this.startListening();
             }
 
-            // If this wakeword was triggered since the last check, consume it and return true once
             if (this.triggeredWakewords.has(word)) {
                 this.triggeredWakewords.delete(word);
                 return true;
@@ -236,46 +245,50 @@
                 this.shouldBeListening = false;
                 this.isListeningUntilPause = true;
 
-                this.recognition.onend = () => {
-                    this.isListening = false;
-                    let sessionTranscript = '';
-
-                    this.recognition.continuous = false;
-                    this.recognition.onresult = (e) => {
-                        let text = '';
-                        for (let i = e.resultIndex; i < e.results.length; i++) {
-                            text += e.results[i][0].transcript;
-                        }
-                        sessionTranscript = text.trim();
-                    };
-
-                    this.recognition.onend = () => {
-                        this.isListening = false;
-                        this.isListeningUntilPause = false;
-                        this.transcript = sessionTranscript;
-
-                        this.setupListeners();
-                        if (!this.projectStopped) {
-                            this.shouldBeListening = true;
-                            this.startListening();
-                        }
-                        resolve();
-                    };
-
+                if (this.recognition) {
                     try {
-                        this.recognition.start();
-                        this.isListening = true;
-                    } catch (err) {
-                        this.isListening = false;
-                        this.isListeningUntilPause = false;
-                        resolve();
+                        this.recognition.abort();
+                    } catch (e) {}
+                }
+
+                const SpeechRecognition =
+                    window.SpeechRecognition ||
+                    window.webkitSpeechRecognition;
+
+                const sessionRec = new SpeechRecognition();
+                sessionRec.lang = 'en-US';
+                sessionRec.continuous = false;
+                sessionRec.interimResults = true;
+
+                let sessionTranscript = '';
+
+                sessionRec.onresult = (e) => {
+                    let text = '';
+                    for (let i = e.resultIndex; i < e.results.length; i++) {
+                        text += e.results[i][0].transcript;
                     }
+                    sessionTranscript = text.trim();
+                };
+
+                sessionRec.onend = () => {
+                    this.isListening = false;
+                    this.isListeningUntilPause = false;
+                    this.transcript = sessionTranscript;
+
+                    if (!this.projectStopped) {
+                        this.shouldBeListening = true;
+                        this.startListening();
+                    }
+                    resolve();
                 };
 
                 try {
-                    this.recognition.stop();
-                } catch (e) {
-                    this.recognition.onend();
+                    sessionRec.start();
+                    this.isListening = true;
+                } catch (err) {
+                    this.isListening = false;
+                    this.isListeningUntilPause = false;
+                    resolve();
                 }
             });
         }
