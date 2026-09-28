@@ -246,21 +246,30 @@
                 return;
             }
 
-            // Periodically refresh block discovery in case new blocks were added while running
-            this.discoverWakewords();
+            const now = Date.now();
+
+            // Very short cooldown to prevent double-firing while letting rapid single words through
+            if (now - this.lastTriggerTime < 250) {
+                return;
+            }
 
             for (const wakeword of this.registeredWakewords) {
                 if (this.containsWakeword(text, wakeword)) {
+                    this.lastTriggerTime = now;
+
                     const current = this.wakewordTokens.get(wakeword) || 0;
                     this.wakewordTokens.set(wakeword, current + 1);
 
-                    // Clean out matched portion to avoid re-triggering on the same phrase immediately
-                    this.backgroundTranscript = this.backgroundTranscript.replace(wakeword, '').trim();
-                }
-            }
+                    // Retain a sliding chunk rather than completely wiping out speech history, 
+                    // preventing dropped trailing single-word cues.
+                    if (this.backgroundTranscript.length > 60) {
+                        this.backgroundTranscript = this.backgroundTranscript.slice(-30);
+                    } else {
+                        this.backgroundTranscript = '';
+                    }
 
-            if (this.backgroundTranscript.length > 200) {
-                this.backgroundTranscript = this.backgroundTranscript.slice(-200);
+                    break;
+                }
             }
         }
 
@@ -289,6 +298,7 @@
 
                 let currentChunk = '';
 
+                // Force compilation of both final and interim segments aggressively
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                     currentChunk += event.results[i][0].transcript;
                 }
@@ -299,6 +309,7 @@
                     return;
                 }
 
+                // Append and immediately evaluate
                 this.backgroundTranscript = (
                     this.backgroundTranscript +
                     ' ' +
@@ -306,6 +317,10 @@
                 )
                     .replace(/\s+/g, ' ')
                     .trim();
+
+                if (this.backgroundTranscript.length > 200) {
+                    this.backgroundTranscript = this.backgroundTranscript.slice(-200);
+                }
 
                 this.detectWakewords(this.backgroundTranscript);
             };
@@ -338,6 +353,7 @@
                     return;
                 }
 
+                // Instant loop-back restart to avoid dead air gaps where single words get missed
                 this.scheduleBackgroundRestart(20);
             };
         }
@@ -437,7 +453,6 @@
 
                     {
                         opcode: 'cancelListening',
-                        blockType: SEEK ? ... : 'cancelListening',
                         blockType: Scratch.BlockType.COMMAND,
                         text: 'Cancel All Listening'
                     }
