@@ -226,7 +226,6 @@
 
             const escaped = this.escapeRegex(normalizedWakeword);
             
-            // Ultra-permissive regex tailored for short/single words in Chromium/Edge
             const regex = new RegExp(
                 '(?:^|\\s|[^a-z0-9])' +
                 escaped +
@@ -248,8 +247,7 @@
 
             const now = Date.now();
 
-            // Very short cooldown to prevent double-firing while letting rapid single words through
-            if (now - this.lastTriggerTime < 250) {
+            if (now - this.lastTriggerTime < 300) {
                 return;
             }
 
@@ -260,14 +258,8 @@
                     const current = this.wakewordTokens.get(wakeword) || 0;
                     this.wakewordTokens.set(wakeword, current + 1);
 
-                    // Retain a sliding chunk rather than completely wiping out speech history, 
-                    // preventing dropped trailing single-word cues.
-                    if (this.backgroundTranscript.length > 60) {
-                        this.backgroundTranscript = this.backgroundTranscript.slice(-30);
-                    } else {
-                        this.backgroundTranscript = '';
-                    }
-
+                    // Clear transcript buffer immediately upon match to prevent stuck/repeated triggers
+                    this.backgroundTranscript = '';
                     break;
                 }
             }
@@ -287,10 +279,6 @@
             recognition.continuous = true;
             recognition.interimResults = true;
 
-            // --------------------------------------------------------
-            // RESULT
-            // --------------------------------------------------------
-
             recognition.onresult = (event) => {
                 if (this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening) {
                     return;
@@ -298,7 +286,6 @@
 
                 let currentChunk = '';
 
-                // Force compilation of both final and interim segments aggressively
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                     currentChunk += event.results[i][0].transcript;
                 }
@@ -309,7 +296,6 @@
                     return;
                 }
 
-                // Append and immediately evaluate
                 this.backgroundTranscript = (
                     this.backgroundTranscript +
                     ' ' +
@@ -325,10 +311,6 @@
                 this.detectWakewords(this.backgroundTranscript);
             };
 
-            // --------------------------------------------------------
-            // ERROR
-            // --------------------------------------------------------
-
             recognition.onerror = (event) => {
                 if (
                     event.error !== 'no-speech' &&
@@ -342,10 +324,6 @@
                 }
             };
 
-            // --------------------------------------------------------
-            // END
-            // --------------------------------------------------------
-
             recognition.onend = () => {
                 this.isListening = false;
 
@@ -353,7 +331,6 @@
                     return;
                 }
 
-                // Instant loop-back restart to avoid dead air gaps where single words get missed
                 this.scheduleBackgroundRestart(20);
             };
         }
@@ -418,14 +395,10 @@
             return {
                 id: 'speechtotext',
                 name: 'Speech to Text',
-
-                docsURI:
-                    'https://cattymod.app/docs/extensions/stt',
-
+                docsURI: 'https://cattymod.app/docs/extensions/stt',
                 color1: '#CF63CF',
                 color2: '#B84CB8',
                 color3: '#E07CE0',
-
                 blocks: [
                     {
                         opcode: 'onWakeword',
@@ -438,19 +411,16 @@
                             }
                         }
                     },
-
                     {
                         opcode: 'listenUntilPause',
                         blockType: Scratch.BlockType.COMMAND,
                         text: 'Listen until Pause'
                     },
-
                     {
                         opcode: 'getSpeechText',
                         blockType: Scratch.BlockType.REPORTER,
                         text: 'Speech Text'
                     },
-
                     {
                         opcode: 'cancelListening',
                         blockType: Scratch.BlockType.COMMAND,
@@ -475,10 +445,8 @@
                 return false;
             }
 
-            // Always track/ensure wake words are registered dynamically when polled by Scratch
             this.registeredWakewords.add(wakeword);
 
-            // Ensure background listener is always active
             if (!this.shouldBeListening) {
                 this.shouldBeListening = true;
                 this.startBackgroundListening();
@@ -627,17 +595,9 @@
             });
         }
 
-        // ============================================================
-        // SPEECH TEXT
-        // ============================================================
-
         getSpeechText() {
             return this.transcript;
         }
-
-        // ============================================================
-        // CANCEL ALL LISTENING
-        // ============================================================
 
         cancelListening() {
             this.shouldBeListening = false;
@@ -658,10 +618,6 @@
             this.setupBackgroundHandlers();
         }
     }
-
-    // ================================================================
-    // REGISTER EXTENSION
-    // ================================================================
 
     Scratch.extensions.register(
         new SpeechToTextExtension()
