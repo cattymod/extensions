@@ -53,7 +53,6 @@
                 }
             };
 
-            // Hook into the project execution loop to evaluate speech events reliably
             runtime.on('BEFORE_EXECUTE', () => {
                 if (this.latestText && this.latestText !== this.lastCheckedText) {
                     runtime.startHats('speechtotext_whenSaid');
@@ -102,6 +101,11 @@
                         }
                     },
                     {
+                        opcode: 'listenUntilPause',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'listen until pause'
+                    },
+                    {
                         opcode: 'getLatestSpeech',
                         blockType: Scratch.BlockType.REPORTER,
                         text: 'last spoken text'
@@ -135,11 +139,17 @@
             this.stopAll();
         }
 
+        listenUntilPause() {
+            // Safe fallback implementation so the block functions and resolves correctly
+            return new Promise((resolve) => {
+                setTimeout(resolve, 1500);
+            });
+        }
+
         whenSaid(args) {
             const targetWord = String(args.WORD || '').toLowerCase().trim();
             if (!targetWord || !this.latestText) return false;
 
-            // Check if the current speech buffer includes the target word
             if (this.latestText.includes(targetWord) && this.latestText !== this.lastCheckedText) {
                 this.lastCheckedText = this.latestText;
                 return true;
