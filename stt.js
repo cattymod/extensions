@@ -21,7 +21,6 @@
             this.isListeningUntilPause = false;
             this.projectStopped = false;
 
-            this.triggeredWakewords = new Set();
             this.registeredWakewords = new Set();
 
             const SpeechRecognition =
@@ -46,7 +45,7 @@
             this.projectStopped = false;
             this.isListeningUntilPause = false;
             this.transcript = '';
-            this.triggeredWakewords.clear();
+            this.registeredWakewords.clear();
             this.discoverWakewords();
             this.shouldBeListening = true;
             this.startListening();
@@ -56,7 +55,6 @@
             this.projectStopped = true;
             this.shouldBeListening = false;
             this.isListeningUntilPause = false;
-            this.triggeredWakewords.clear();
             if (this.recognition) {
                 try {
                     this.recognition.abort();
@@ -127,10 +125,11 @@
                 const normalizedSpeech = this.normalize(spokenText);
                 if (!normalizedSpeech) return;
 
+                // Check wakewords and directly fire the event hat block
                 for (const word of this.registeredWakewords) {
                     const regex = new RegExp(`(^|\\s)${word}(\\s|$)`, 'i');
                     if (regex.test(normalizedSpeech)) {
-                        this.triggeredWakewords.add(word);
+                        this.triggerWakewordEvent(word);
                     }
                 }
             };
@@ -146,13 +145,19 @@
                 if (this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening) {
                     return;
                 }
-                // Recreate and restart fresh instance to bypass browser freezing bug
                 setTimeout(() => {
                     this.startListening();
                 }, 100);
             };
 
             return rec;
+        }
+
+        triggerWakewordEvent(targetWord) {
+            // Tell Scratch VM to execute any script starting with "on wakeword [WORD]"
+            Scratch.vm.runtime.startHats('speechtotext_onWakeword', {
+                WORD: targetWord
+            });
         }
 
         startListening() {
@@ -215,27 +220,14 @@
             };
         }
 
-        onWakeword(args) {
-            if (this.projectStopped || this.isListeningUntilPause) {
-                return false;
-            }
-
+        onWakeword(args, util) {
+            // Event hat blocks don't poll; they are triggered via startHats. 
+            // Returning false here keeps the normal hat skeleton intact.
             const word = this.normalize(args.WORD);
-            if (!word) return false;
-
-            this.registeredWakewords.add(word);
-
-            if (!this.shouldBeListening) {
-                this.shouldBeListening = true;
-                this.startListening();
+            if (word) {
+                this.registeredWakewords.add(word);
             }
-
-            if (this.triggeredWakewords.has(word)) {
-                this.triggeredWakewords.delete(word);
-                return true;
-            }
-
-            return false;
+            return false; 
         }
 
         listenUntilPause() {
