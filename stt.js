@@ -21,7 +21,9 @@
             this.isListeningUntilPause = false;
             this.projectStopped = false;
 
-            this.registeredWakewords = new Set();
+            this.latestTranscript = '';
+            this.triggeredWords = new Set();
+            this.registeredWords = new Set();
 
             const SpeechRecognition =
                 window.SpeechRecognition ||
@@ -45,9 +47,11 @@
             this.projectStopped = false;
             this.isListeningUntilPause = false;
             this.transcript = '';
-            this.registeredWakewords.clear();
-            this.discoverWakewords();
+            this.latestTranscript = '';
+            this.triggeredWords.clear();
+            this.registeredWords.clear();
             this.shouldBeListening = true;
+            this.initRecognition();
             this.startListening();
         }
 
@@ -63,35 +67,6 @@
             this.isListening = false;
         }
 
-        discoverWakewords() {
-            const runtime = Scratch.vm.runtime;
-            if (!runtime || !runtime.targets) return;
-
-            for (const target of runtime.targets) {
-                if (!target || !target.blocks) continue;
-                const blocks = target.blocks._blocks;
-                if (!blocks) continue;
-
-                for (const id in blocks) {
-                    const block = blocks[id];
-                    if (!block || block.opcode !== 'speechtotext_onWakeword') continue;
-
-                    let wakeword = '';
-                    if (block.fields && block.fields.WORD) {
-                        wakeword = block.fields.WORD.value;
-                    } else if (block.inputs && block.inputs.WORD) {
-                        const input = block.inputs.WORD;
-                        if (Array.isArray(input)) wakeword = input[0];
-                    }
-
-                    wakeword = this.normalize(wakeword);
-                    if (wakeword) {
-                        this.registeredWakewords.add(wakeword);
-                    }
-                }
-            }
-        }
-
         normalize(text) {
             return String(text || '')
                 .toLowerCase()
@@ -100,64 +75,59 @@
                 .trim();
         }
 
-        createRecognition() {
+        initRecognition() {
+            if (this.recognition) return;
+
             const SpeechRecognition =
                 window.SpeechRecognition ||
                 window.webkitSpeechRecognition;
 
-            if (!SpeechRecognition) return null;
+            if (!SpeechRecognition) return;
 
-            const rec = new SpeechRecognition();
-            rec.lang = 'en-US';
-            rec.continuous = true;
-            rec.interimResults = true;
+            this.recognition = new SpeechRecognition();
+            this.recognition.lang = 'en-US';
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
 
-            rec.onresult = (event) => {
+            this.recognition.onresult = (event) => {
                 if (this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening) {
                     return;
                 }
 
-                let spokenText = '';
+                let currentSentence = '';
                 for (let i = event.resultIndex; i < event.results.length; i++) {
-                    spokenText += event.results[i][0].transcript;
+                    currentSentence += event.results[i][0].transcript;
                 }
 
-                const normalizedSpeech = this.normalize(spokenText);
-                if (!normalizedSpeech) return;
+                const normalized = this.normalize(currentSentence);
+                this.latestTranscript = normalized;
 
-                // Check wakewords and directly fire the event hat block
-                for (const word of this.registeredWakewords) {
+                if (!normalized) return;
+
+                for (const word of this.registeredWords) {
                     const regex = new RegExp(`(^|\\s)${word}(\\s|$)`, 'i');
-                    if (regex.test(normalizedSpeech)) {
-                        this.triggerWakewordEvent(word);
+                    if (regex.test(normalized)) {
+                        this.triggeredWords.add(word);
                     }
                 }
             };
 
-            rec.onerror = (event) => {
+            this.recognition.onerror = (event) => {
                 if (event.error !== 'no-speech' && event.error !== 'aborted') {
-                    console.warn('Speech recognition error:', event.error);
+                    console.warn('Speech recognition warning:', event.error);
                 }
             };
 
-            rec.onend = () => {
+            this.recognition.onend = () => {
                 this.isListening = false;
                 if (this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening) {
                     return;
                 }
+                // Quick auto-recovery loop
                 setTimeout(() => {
                     this.startListening();
-                }, 100);
+                }, 150);
             };
-
-            return rec;
-        }
-
-        triggerWakewordEvent(targetWord) {
-            // Tell Scratch VM to execute any script starting with "on wakeword [WORD]"
-            Scratch.vm.runtime.startHats('speechtotext_onWakeword', {
-                WORD: targetWord
-            });
         }
 
         startListening() {
@@ -165,21 +135,20 @@
                 return;
             }
 
-            if (this.recognition) {
-                try {
-                    this.recognition.abort();
-                } catch (e) {}
+            if (!this.recognition) {
+                this.initRecognition();
             }
-
-            this.recognition = this.createRecognition();
-            if (!this.recognition) return;
 
             try {
                 this.recognition.start();
                 this.isListening = true;
             } catch (e) {
+                // If it fails because instance was already running, abort and retry safely
                 this.isListening = false;
-                setTimeout(() => this.startListening(), 300);
+                try {
+                    this.recognition.abort();
+                } catch (err) {}
+                setTimeout(() => this.startListening(), 400);
             }
         }
 
@@ -220,14 +189,29 @@
             };
         }
 
-        onWakeword(args, util) {
-            // Event hat blocks don't poll; they are triggered via startHats. 
-            // Returning false here keeps the normal hat skeleton intact.
-            const word = this.normalize(args.WORD);
-            if (word) {
-                this.registeredWakewords.add(word);
+        onWakeword(args) {
+            if (this.projectStopped || this.isListeningUntilPause) {
+                return false;
             }
-            return false; 
+
+            const word = this.normalize(args.WORD);
+            if (!word) return false;
+
+            this.registeredWords.add(word);
+
+            if (!this.shouldBeListening) {
+                this.shouldBeListening = true;
+                this.initRecognition();
+                this.startListening();
+            }
+
+            // Check if the word was triggered since the last block check
+            if (this.triggeredWords.has(word)) {
+                this.triggeredWords.delete(word);
+                return true;
+            }
+
+            return false;
         }
 
         listenUntilPause() {
@@ -237,35 +221,33 @@
                 this.shouldBeListening = false;
                 this.isListeningUntilPause = true;
 
-                if (this.recognition) {
-                    try {
-                        this.recognition.abort();
-                    } catch (e) {}
-                }
+                try {
+                    this.recognition.abort();
+                } catch (e) {}
 
                 const SpeechRecognition =
                     window.SpeechRecognition ||
                     window.webkitSpeechRecognition;
 
-                const sessionRec = new SpeechRecognition();
-                sessionRec.lang = 'en-US';
-                sessionRec.continuous = false;
-                sessionRec.interimResults = true;
+                const singleRec = new SpeechRecognition();
+                singleRec.lang = 'en-US';
+                singleRec.continuous = false;
+                singleRec.interimResults = true;
 
-                let sessionTranscript = '';
+                let phrase = '';
 
-                sessionRec.onresult = (e) => {
+                singleRec.onresult = (e) => {
                     let text = '';
                     for (let i = e.resultIndex; i < e.results.length; i++) {
                         text += e.results[i][0].transcript;
                     }
-                    sessionTranscript = text.trim();
+                    phrase = text.trim();
                 };
 
-                sessionRec.onend = () => {
+                singleRec.onend = () => {
                     this.isListening = false;
                     this.isListeningUntilPause = false;
-                    this.transcript = sessionTranscript;
+                    this.transcript = phrase;
 
                     if (!this.projectStopped) {
                         this.shouldBeListening = true;
@@ -275,7 +257,7 @@
                 };
 
                 try {
-                    sessionRec.start();
+                    singleRec.start();
                     this.isListening = true;
                 } catch (err) {
                     this.isListening = false;
