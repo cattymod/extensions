@@ -8,7 +8,7 @@
     'use strict';
 
     if (!Scratch.extensions.unsandboxed) {
-        alert('This extension must run unsandboxed.');
+        alert('This extension must run unsandboxed to access the microphone.');
         return;
     }
 
@@ -17,35 +17,47 @@
             this.transcript = '';
             this.backgroundTranscript = '';
 
-            this.SpeechRecognition =
+            this.recognition = null;
+            this.isListening = false;
+
+            this.shouldBeListening = false;
+            this.isListeningUntilPause = false;
+            this.projectStopped = false;
+
+            this.lastTriggerTime = 0;
+            this.restartTimer = null;
+
+            // Wakewords discovered from the project.
+            this.registeredWakewords = new Set();
+
+            // Number of times each wakeword has been detected.
+            this.wakewordTokens = new Map();
+
+            // Number of detections already consumed by Scratch.
+            this.consumedWakewordTokens = new Map();
+
+            const SpeechRecognition =
                 window.SpeechRecognition ||
                 window.webkitSpeechRecognition;
 
-            this.recognition = null;
-
-            this.isListening = false;
-            this.isListeningUntilPause = false;
-            this.shouldBeListening = false;
-            this.projectStopped = false;
-
-            this.restartTimer = null;
-
-            // Wakewords found in the project.
-            this.registeredWakewords = new Set();
-
-            // The wakeword currently being fired.
-            // This is only set while runtime.startHats() is running.
-            this.triggeringWakeword = null;
-
-            // Wakewords whose HAT scripts are currently running.
-            this.activeWakewords = new Set();
-
-            if (!this.SpeechRecognition) {
+            if (!SpeechRecognition) {
                 console.warn(
                     'Speech recognition is not supported by this browser.'
                 );
                 return;
             }
+
+            this.recognition = new SpeechRecognition();
+
+            this.recognition.lang = 'en-US';
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
+
+            this.setupBackgroundHandlers();
+
+            // --------------------------------------------------------
+            // PROJECT STOP
+            // --------------------------------------------------------
 
             Scratch.vm.runtime.on(
                 'PROJECT_STOP_ALL',
@@ -53,6 +65,10 @@
                     this.stopAllListening();
                 }
             );
+
+            // --------------------------------------------------------
+            // PROJECT START
+            // --------------------------------------------------------
 
             Scratch.vm.runtime.on(
                 'PROJECT_START',
@@ -62,41 +78,43 @@
             );
         }
 
-        normalizeText(text) {
-            return String(text || '')
-                .toLowerCase()
-                .replace(
-                    /[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,
-                    ''
-                )
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
+        // ============================================================
+        // PROJECT LIFECYCLE
+        // ============================================================
 
-        escapeRegex(text) {
-            return text.replace(
-                /[.*+?^${}()|[\]\\]/g,
-                '\\$&'
-            );
-        }
-
-        containsWakeword(text, wakeword) {
-            text = this.normalizeText(text);
-            wakeword = this.normalizeText(wakeword);
-
-            if (!text || !wakeword) {
-                return false;
+        startProjectSession() {
+            if (!this.recognition) {
+                return;
             }
 
-            const regex = new RegExp(
-                '(?:^|\\s)' +
-                this.escapeRegex(wakeword) +
-                '(?=\\s|$)',
-                'i'
-            );
+            this.projectStopped = false;
 
-            return regex.test(text);
+            this.isListeningUntilPause = false;
+            this.isListening = false;
+
+            this.backgroundTranscript = '';
+            this.transcript = '';
+
+            this.lastTriggerTime = 0;
+
+            this.wakewordTokens.clear();
+            this.consumedWakewordTokens.clear();
+
+            this.clearRestartTimer();
+
+            this.setupBackgroundHandlers();
+
+            // Discover any current ones as a fallback.
+            this.discoverWakewords();
+
+            // Start listening immediately.
+            this.shouldBeListening = true;
+            this.startBackgroundListening();
         }
+
+        // ============================================================
+        // DISCOVER WAKEWORDS FROM THE PROJECT
+        // ============================================================
 
         discoverWakewords() {
             const runtime = Scratch.vm.runtime;
@@ -106,7 +124,7 @@
             }
 
             for (const target of runtime.targets) {
-                if (!target.blocks) {
+                if (!target || !target.blocks) {
                     continue;
                 }
 
@@ -119,172 +137,197 @@
                 for (const id in blocks) {
                     const block = blocks[id];
 
-                    if (
-                        !block ||
-                        block.opcode !==
-                            'speechtotext_onWakeword'
-                    ) {
+                    if (!block || block.opcode !== 'speechtotext_onWakeword') {
                         continue;
                     }
 
-                    let word = '';
+                    let wakeword = '';
 
-                    if (
-                        block.fields &&
-                        block.fields.WORD
-                    ) {
-                        word =
-                            block.fields.WORD.value;
+                    if (block.fields && block.fields.WORD) {
+                        wakeword = block.fields.WORD.value;
                     }
 
-                    if (!word) {
-                        continue;
+                    if (!wakeword && block.inputs && block.inputs.WORD) {
+                        const input = block.inputs.WORD;
+                        if (Array.isArray(input) && input.length > 0) {
+                            wakeword = input[0];
+                        } else if (typeof input === 'string') {
+                            wakeword = input;
+                        }
                     }
 
-                    word =
-                        this.normalizeText(word);
+                    wakeword = this.normalizeText(wakeword);
 
-                    if (word) {
-                        this.registeredWakewords.add(word);
+                    if (wakeword) {
+                        this.registeredWakewords.add(wakeword);
                     }
                 }
             }
         }
 
-        startProjectSession() {
-            if (!this.SpeechRecognition) {
-                return;
-            }
-
-            this.projectStopped = false;
-            this.shouldBeListening = true;
-            this.isListening = false;
-            this.isListeningUntilPause = false;
-
-            this.transcript = '';
-            this.backgroundTranscript = '';
-
-            this.triggeringWakeword = null;
-            this.activeWakewords.clear();
-
-            this.clearRestartTimer();
-            this.abortRecognition();
-
-            this.registeredWakewords.clear();
-
-            this.discoverWakewords();
-
-            this.startBackgroundListening();
-        }
+        // ============================================================
+        // STOP EVERYTHING
+        // ============================================================
 
         stopAllListening() {
             this.projectStopped = true;
 
             this.shouldBeListening = false;
-            this.isListening = false;
             this.isListeningUntilPause = false;
 
             this.backgroundTranscript = '';
 
-            this.triggeringWakeword = null;
-            this.activeWakewords.clear();
+            this.wakewordTokens.clear();
+            this.consumedWakewordTokens.clear();
 
             this.clearRestartTimer();
-            this.abortRecognition();
-        }
 
-        createRecognition() {
-            const recognition =
-                new this.SpeechRecognition();
+            if (this.recognition) {
+                try {
+                    this.recognition.abort();
+                } catch (e) {}
+            }
 
-            recognition.lang = 'en-US';
-            recognition.interimResults = true;
-
-            return recognition;
-        }
-
-        abortRecognition() {
-            const recognition = this.recognition;
-
-            this.recognition = null;
             this.isListening = false;
 
-            if (recognition) {
-                try {
-                    recognition.onresult = null;
-                    recognition.onerror = null;
-                    recognition.onend = null;
-                    recognition.abort();
-                } catch (e) {}
+            this.setupBackgroundHandlers();
+        }
+
+        clearRestartTimer() {
+            if (this.restartTimer !== null) {
+                clearTimeout(this.restartTimer);
+                this.restartTimer = null;
             }
         }
 
-        startBackgroundListening() {
-            if (
-                this.projectStopped ||
-                !this.shouldBeListening ||
-                this.isListeningUntilPause ||
-                this.isListening
-            ) {
+        // ============================================================
+        // TEXT UTILITIES
+        // ============================================================
+
+        normalizeText(text) {
+            return String(text || '')
+                .toLowerCase()
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        escapeRegex(text) {
+            return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        containsWakeword(text, wakeword) {
+            const normalizedText = this.normalizeText(text);
+            const normalizedWakeword = this.normalizeText(wakeword);
+
+            if (!normalizedText || !normalizedWakeword) {
+                return false;
+            }
+
+            const escaped = this.escapeRegex(normalizedWakeword);
+            
+            // Ultra-permissive regex tailored for short/single words in Chromium/Edge
+            const regex = new RegExp(
+                '(?:^|\\s|[^a-z0-9])' +
+                escaped +
+                '(?:\\s|$|[^a-z0-9])',
+                'i'
+            );
+
+            return regex.test(normalizedText);
+        }
+
+        // ============================================================
+        // WAKEWORD DETECTION
+        // ============================================================
+
+        detectWakewords(text) {
+            if (!text) {
                 return;
             }
 
-            this.clearRestartTimer();
+            const now = Date.now();
 
-            const recognition =
-                this.createRecognition();
+            // Very short cooldown to prevent double-firing while letting rapid single words through
+            if (now - this.lastTriggerTime < 250) {
+                return;
+            }
 
-            this.recognition = recognition;
-            this.isListening = true;
+            for (const wakeword of this.registeredWakewords) {
+                if (this.containsWakeword(text, wakeword)) {
+                    this.lastTriggerTime = now;
+
+                    const current = this.wakewordTokens.get(wakeword) || 0;
+                    this.wakewordTokens.set(wakeword, current + 1);
+
+                    // Retain a sliding chunk rather than completely wiping out speech history, 
+                    // preventing dropped trailing single-word cues.
+                    if (this.backgroundTranscript.length > 60) {
+                        this.backgroundTranscript = this.backgroundTranscript.slice(-30);
+                    } else {
+                        this.backgroundTranscript = '';
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        // ============================================================
+        // BACKGROUND HANDLERS
+        // ============================================================
+
+        setupBackgroundHandlers() {
+            if (!this.recognition) {
+                return;
+            }
+
+            const recognition = this.recognition;
 
             recognition.continuous = true;
             recognition.interimResults = true;
 
+            // --------------------------------------------------------
+            // RESULT
+            // --------------------------------------------------------
+
             recognition.onresult = (event) => {
-                if (
-                    this.projectStopped ||
-                    this.isListeningUntilPause ||
-                    !this.shouldBeListening ||
-                    this.recognition !== recognition
-                ) {
+                if (this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening) {
                     return;
                 }
 
-                let text = '';
+                let currentChunk = '';
 
-                for (
-                    let i = event.resultIndex;
-                    i < event.results.length;
-                    i++
-                ) {
-                    text +=
-                        event.results[i][0].transcript;
+                // Force compilation of both final and interim segments aggressively
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    currentChunk += event.results[i][0].transcript;
                 }
 
-                text = this.normalizeText(text);
+                currentChunk = this.normalizeText(currentChunk);
 
-                if (!text) {
+                if (!currentChunk) {
                     return;
                 }
 
+                // Append and immediately evaluate
                 this.backgroundTranscript = (
                     this.backgroundTranscript +
                     ' ' +
-                    text
+                    currentChunk
                 )
                     .replace(/\s+/g, ' ')
                     .trim();
 
-                if (
-                    this.backgroundTranscript.length >
-                    300
-                ) {
-                    this.backgroundTranscript =
-                        this.backgroundTranscript.slice(-300);
+                if (this.backgroundTranscript.length > 200) {
+                    this.backgroundTranscript = this.backgroundTranscript.slice(-200);
                 }
 
-                this.checkForWakeword();
+                this.detectWakewords(this.backgroundTranscript);
             };
+
+            // --------------------------------------------------------
+            // ERROR
+            // --------------------------------------------------------
 
             recognition.onerror = (event) => {
                 if (
@@ -293,397 +336,38 @@
                     event.error !== 'network'
                 ) {
                     console.warn(
-                        'Speech recognition:',
+                        'Speech recognition warning/error:',
                         event.error
                     );
                 }
             };
 
+            // --------------------------------------------------------
+            // END
+            // --------------------------------------------------------
+
             recognition.onend = () => {
-                if (
-                    this.recognition !== recognition
-                ) {
-                    return;
-                }
-
-                this.recognition = null;
                 this.isListening = false;
 
-                if (
-                    this.projectStopped ||
-                    this.isListeningUntilPause ||
-                    !this.shouldBeListening
-                ) {
+                if (this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening) {
                     return;
                 }
 
-                this.scheduleRestart(50);
+                // Instant loop-back restart to avoid dead air gaps where single words get missed
+                this.scheduleBackgroundRestart(20);
             };
-
-            try {
-                recognition.start();
-            } catch (e) {
-                this.recognition = null;
-                this.isListening = false;
-
-                this.scheduleRestart(100);
-            }
         }
 
-        checkForWakeword() {
-            if (
-                this.projectStopped ||
-                this.isListeningUntilPause
-            ) {
+        // ============================================================
+        // RESTART
+        // ============================================================
+
+        scheduleBackgroundRestart(delay) {
+            if (!this.recognition || this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening || this.isListening) {
                 return;
             }
 
-            // Discover newly-added HATs.
-            this.discoverWakewords();
-
-            for (
-                const wakeword of
-                    this.registeredWakewords
-            ) {
-                if (
-                    this.activeWakewords.has(
-                        wakeword
-                    )
-                ) {
-                    continue;
-                }
-
-                if (
-                    !this.containsWakeword(
-                        this.backgroundTranscript,
-                        wakeword
-                    )
-                ) {
-                    continue;
-                }
-
-                // Prevent the same recognition text
-                // from triggering repeatedly.
-                this.backgroundTranscript = '';
-
-                this.fireWakeword(wakeword);
-
-                return;
-            }
-        }
-
-        fireWakeword(wakeword) {
-            if (
-                this.projectStopped ||
-                this.activeWakewords.has(wakeword)
-            ) {
-                return;
-            }
-
-            const runtime = Scratch.vm.runtime;
-
-            if (!runtime) {
-                return;
-            }
-
-            /*
-             * IMPORTANT:
-             *
-             * Predicate HATs are NOT automatically
-             * started by TurboWarp.
-             *
-             * We start the HAT manually here.
-             *
-             * We do NOT pass WORD as a startHats
-             * filter because WORD is a normal
-             * string input, not a menu field.
-             */
-            this.triggeringWakeword = wakeword;
-
-            let threads = [];
-
-            try {
-                threads =
-                    runtime.startHats(
-                        'speechtotext_onWakeword'
-                    );
-            } catch (e) {
-                console.error(
-                    'Could not start wakeword HAT:',
-                    e
-                );
-            }
-
-            this.triggeringWakeword = null;
-
-            if (
-                !threads ||
-                threads.length === 0
-            ) {
-                return;
-            }
-
-            // At least one HAT script actually started.
-            this.activeWakewords.add(wakeword);
-
-            this.waitForWakewordThreads(
-                wakeword,
-                threads
-            );
-        }
-
-        waitForWakewordThreads(
-            wakeword,
-            threads
-        ) {
-            const check = () => {
-                if (this.projectStopped) {
-                    this.activeWakewords.delete(
-                        wakeword
-                    );
-                    return;
-                }
-
-                const runtime =
-                    Scratch.vm.runtime;
-
-                if (!runtime) {
-                    this.activeWakewords.delete(
-                        wakeword
-                    );
-                    return;
-                }
-
-                const stillRunning =
-                    threads.some(
-                        thread =>
-                            runtime.threads.includes(
-                                thread
-                            )
-                    );
-
-                if (!stillRunning) {
-                    /*
-                     * The ENTIRE HAT script has finished.
-                     *
-                     * Wakeword activation is allowed
-                     * again now.
-                     */
-                    this.activeWakewords.delete(
-                        wakeword
-                    );
-
-                    return;
-                }
-
-                setTimeout(check, 25);
-            };
-
-            setTimeout(check, 25);
-        }
-
-        /*
-         * This is the actual HAT predicate.
-         *
-         * TurboWarp calls this when startHats()
-         * checks the HAT.
-         */
-        onWakeword(args) {
-            if (
-                this.projectStopped ||
-                this.isListeningUntilPause
-            ) {
-                return false;
-            }
-
-            const word =
-                this.normalizeText(args.WORD);
-
-            if (!word) {
-                return false;
-            }
-
-            // Remember this HAT for future detection.
-            this.registeredWakewords.add(word);
-
-            /*
-             * Only the HAT whose WORD matches the
-             * wakeword currently being fired gets
-             * started.
-             */
-            return (
-                this.triggeringWakeword === word
-            );
-        }
-
-        listenUntilPause() {
-            if (
-                !this.SpeechRecognition ||
-                this.projectStopped
-            ) {
-                return Promise.resolve();
-            }
-
-            return new Promise((resolve) => {
-                this.shouldBeListening = false;
-                this.isListeningUntilPause = true;
-
-                this.clearRestartTimer();
-
-                const oldRecognition =
-                    this.recognition;
-
-                this.recognition = null;
-                this.isListening = false;
-
-                if (oldRecognition) {
-                    try {
-                        oldRecognition.onresult = null;
-                        oldRecognition.onerror = null;
-                        oldRecognition.onend = null;
-                        oldRecognition.abort();
-                    } catch (e) {}
-                }
-
-                let finalText = '';
-
-                setTimeout(() => {
-                    if (this.projectStopped) {
-                        this.isListeningUntilPause =
-                            false;
-
-                        resolve();
-                        return;
-                    }
-
-                    const recognition =
-                        this.createRecognition();
-
-                    this.recognition =
-                        recognition;
-
-                    this.isListening = true;
-
-                    recognition.continuous = false;
-                    recognition.interimResults = true;
-
-                    recognition.onresult =
-                        (event) => {
-                            let text = '';
-
-                            for (
-                                let i =
-                                    event.resultIndex;
-                                i <
-                                    event.results
-                                        .length;
-                                i++
-                            ) {
-                                text +=
-                                    event.results[i][0]
-                                        .transcript;
-                            }
-
-                            if (text.trim()) {
-                                finalText =
-                                    text.trim();
-                            }
-                        };
-
-                    recognition.onerror =
-                        (event) => {
-                            if (
-                                event.error !==
-                                    'no-speech' &&
-                                event.error !==
-                                    'aborted'
-                            ) {
-                                console.warn(
-                                    'Listen until Pause:',
-                                    event.error
-                                );
-                            }
-                        };
-
-                    recognition.onend = () => {
-                        if (
-                            this.recognition !==
-                            recognition
-                        ) {
-                            return;
-                        }
-
-                        this.recognition = null;
-                        this.isListening = false;
-
-                        this.transcript =
-                            finalText;
-
-                        this.backgroundTranscript =
-                            '';
-
-                        this.isListeningUntilPause =
-                            false;
-
-                        if (
-                            this.projectStopped
-                        ) {
-                            this.shouldBeListening =
-                                false;
-
-                            resolve();
-                            return;
-                        }
-
-                        /*
-                         * The HAT's Listen Until Pause
-                         * has finished.
-                         *
-                         * Background wakeword
-                         * listening can resume.
-                         */
-                        this.shouldBeListening =
-                            true;
-
-                        this.scheduleRestart(50);
-
-                        resolve();
-                    };
-
-                    try {
-                        recognition.start();
-                    } catch (e) {
-                        this.recognition = null;
-                        this.isListening = false;
-
-                        this.isListeningUntilPause =
-                            false;
-
-                        if (
-                            !this.projectStopped
-                        ) {
-                            this.shouldBeListening =
-                                true;
-
-                            this.scheduleRestart(
-                                100
-                            );
-                        }
-
-                        resolve();
-                    }
-                }, 100);
-            });
-        }
-
-        scheduleRestart(delay) {
-            if (
-                this.restartTimer !== null ||
-                this.projectStopped ||
-                !this.shouldBeListening ||
-                this.isListeningUntilPause ||
-                this.isListening
-            ) {
+            if (this.restartTimer !== null) {
                 return;
             }
 
@@ -692,8 +376,8 @@
 
                 if (
                     this.projectStopped ||
-                    !this.shouldBeListening ||
                     this.isListeningUntilPause ||
+                    !this.shouldBeListening ||
                     this.isListening
                 ) {
                     return;
@@ -703,29 +387,32 @@
             }, delay);
         }
 
-        clearRestartTimer() {
-            if (this.restartTimer !== null) {
-                clearTimeout(
-                    this.restartTimer
-                );
+        // ============================================================
+        // START BACKGROUND LISTENING
+        // ============================================================
 
-                this.restartTimer = null;
+        startBackgroundListening() {
+            if (!this.recognition || this.projectStopped || this.isListeningUntilPause || !this.shouldBeListening || this.isListening) {
+                return;
+            }
+
+            this.clearRestartTimer();
+
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
+
+            try {
+                this.recognition.start();
+                this.isListening = true;
+            } catch (e) {
+                this.isListening = false;
+                this.scheduleBackgroundRestart(100);
             }
         }
 
-        getSpeechText() {
-            return this.transcript;
-        }
-
-        cancelListening() {
-            this.shouldBeListening = false;
-            this.isListeningUntilPause = false;
-
-            this.backgroundTranscript = '';
-
-            this.clearRestartTimer();
-            this.abortRecognition();
-        }
+        // ============================================================
+        // SCRATCH INFO
+        // ============================================================
 
         getInfo() {
             return {
@@ -742,61 +429,239 @@
                 blocks: [
                     {
                         opcode: 'onWakeword',
-                        blockType:
-                            Scratch.BlockType.HAT,
-
-                        text:
-                            'on wakeword [WORD]',
-
-                        isEdgeActivated: false,
-
+                        blockType: Scratch.BlockType.HAT,
+                        text: 'on wakeword [WORD]',
                         arguments: {
                             WORD: {
-                                type:
-                                    Scratch.ArgumentType.STRING,
-
-                                defaultValue:
-                                    'computer'
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: 'computer'
                             }
                         }
                     },
 
                     {
-                        opcode:
-                            'listenUntilPause',
-
-                        blockType:
-                            Scratch.BlockType.COMMAND,
-
-                        text:
-                            'Listen until Pause'
+                        opcode: 'listenUntilPause',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'Listen until Pause'
                     },
 
                     {
-                        opcode:
-                            'getSpeechText',
-
-                        blockType:
-                            Scratch.BlockType.REPORTER,
-
-                        text:
-                            'Speech Text'
+                        opcode: 'getSpeechText',
+                        blockType: Scratch.BlockType.REPORTER,
+                        text: 'Speech Text'
                     },
 
                     {
-                        opcode:
-                            'cancelListening',
-
-                        blockType:
-                            Scratch.BlockType.COMMAND,
-
-                        text:
-                            'Cancel All Listening'
+                        opcode: 'cancelListening',
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: 'Cancel All Listening'
                     }
                 ]
             };
         }
+
+        // ============================================================
+        // WAKEWORD HAT
+        // ============================================================
+
+        onWakeword(args) {
+            if (!this.recognition || this.projectStopped || this.isListeningUntilPause) {
+                return false;
+            }
+
+            const wakeword = this.normalizeText(args.WORD);
+
+            if (!wakeword) {
+                return false;
+            }
+
+            // Always track/ensure wake words are registered dynamically when polled by Scratch
+            this.registeredWakewords.add(wakeword);
+
+            // Ensure background listener is always active
+            if (!this.shouldBeListening) {
+                this.shouldBeListening = true;
+                this.startBackgroundListening();
+            } else if (!this.isListening && !this.restartTimer) {
+                this.startBackgroundListening();
+            }
+
+            const detected = this.wakewordTokens.get(wakeword) || 0;
+            const consumed = this.consumedWakewordTokens.get(wakeword) || 0;
+
+            if (detected <= consumed) {
+                return false;
+            }
+
+            // Consume one detection token.
+            this.consumedWakewordTokens.set(wakeword, consumed + 1);
+
+            return true;
+        }
+
+        // ============================================================
+        // LISTEN UNTIL PAUSE
+        // ============================================================
+
+        listenUntilPause() {
+            if (!this.recognition) {
+                return Promise.resolve();
+            }
+
+            return new Promise((resolve) => {
+                const startSession = () => {
+                    if (this.projectStopped) {
+                        resolve();
+                        return;
+                    }
+
+                    this.shouldBeListening = false;
+                    this.isListeningUntilPause = true;
+
+                    this.clearRestartTimer();
+
+                    let sessionTranscript = '';
+
+                    this.recognition.continuous = false;
+                    this.recognition.interimResults = true;
+
+                    this.recognition.onresult = (event) => {
+                        let interim = '';
+                        let finalTranscript = '';
+
+                        for (let i = event.resultIndex; i < event.results.length; i++) {
+                            const result = event.results[i];
+
+                            if (result.isFinal) {
+                                finalTranscript += result[0].transcript;
+                            } else {
+                                interim += result[0].transcript;
+                            }
+                        }
+
+                        if (finalTranscript.trim()) {
+                            sessionTranscript = finalTranscript.trim();
+                        } else if (interim.trim()) {
+                            sessionTranscript = interim.trim();
+                        }
+                    };
+
+                    this.recognition.onerror = (event) => {
+                        if (
+                            event.error !== 'no-speech' &&
+                            event.error !== 'aborted'
+                        ) {
+                            console.error(
+                                'Speech recognition error:',
+                                event.error
+                            );
+                        }
+                    };
+
+                    this.recognition.onend = () => {
+                        this.isListening = false;
+                        this.isListeningUntilPause = false;
+
+                        this.transcript = sessionTranscript;
+                        this.backgroundTranscript = '';
+
+                        this.setupBackgroundHandlers();
+
+                        if (this.projectStopped) {
+                            this.shouldBeListening = false;
+                            resolve();
+                            return;
+                        }
+
+                        this.shouldBeListening = true;
+                        this.scheduleBackgroundRestart(20);
+
+                        resolve();
+                    };
+
+                    this.isListening = true;
+
+                    try {
+                        this.recognition.start();
+                    } catch (e) {
+                        this.isListening = false;
+                        this.isListeningUntilPause = false;
+
+                        this.setupBackgroundHandlers();
+
+                        if (!this.projectStopped) {
+                            this.shouldBeListening = true;
+                            this.scheduleBackgroundRestart(100);
+                        }
+
+                        resolve();
+                    }
+                };
+
+                if (this.isListening) {
+                    this.recognition.onend = () => {
+                        this.isListening = false;
+
+                        if (this.projectStopped) {
+                            resolve();
+                            return;
+                        }
+
+                        startSession();
+                    };
+
+                    try {
+                        this.recognition.stop();
+                    } catch (e) {
+                        this.isListening = false;
+
+                        if (this.projectStopped) {
+                            resolve();
+                        } else {
+                            startSession();
+                        }
+                    }
+                } else {
+                    startSession();
+                }
+            });
+        }
+
+        // ============================================================
+        // SPEECH TEXT
+        // ============================================================
+
+        getSpeechText() {
+            return this.transcript;
+        }
+
+        // ============================================================
+        // CANCEL ALL LISTENING
+        // ============================================================
+
+        cancelListening() {
+            this.shouldBeListening = false;
+            this.isListeningUntilPause = false;
+
+            this.backgroundTranscript = '';
+
+            this.clearRestartTimer();
+
+            if (this.recognition) {
+                try {
+                    this.recognition.abort();
+                } catch (e) {}
+            }
+
+            this.isListening = false;
+
+            this.setupBackgroundHandlers();
+        }
     }
+
+    // ================================================================
+    // REGISTER EXTENSION
+    // ================================================================
 
     Scratch.extensions.register(
         new SpeechToTextExtension()
