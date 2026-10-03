@@ -1,4 +1,3 @@
-```javascript
 // Name: Speech to Text
 // ID: speechtotext
 // Description: Speak to your projects!
@@ -1165,4 +1164,3 @@
     );
 
 })(Scratch);
-```
