@@ -14,30 +14,63 @@
 
     class SpeechToTextExtension {
         constructor() {
+            // ========================================================
+            // STATE
+            // ========================================================
+
             this.transcript = '';
             this.backgroundTranscript = '';
 
             this.recognition = null;
-            this.isListening = false;
 
+            // Current recognition state
+            this.isListening = false;
+            this.startingRecognition = false;
+
+            // What the extension wants to be doing
             this.shouldBeListening = false;
+
+            // A Listen Until Pause session is active
             this.isListeningUntilPause = false;
+
+            // Project lifecycle
             this.projectStopped = false;
 
-            this.lastTriggerTime = 0;
+            // Restart management
             this.restartTimer = null;
 
-            // Prevent multiple recognition.start() calls
-            this.startingRecognition = false;
+            // Detection cooldown
+            this.lastTriggerTime = 0;
+
+            // --------------------------------------------------------
+            // Wakewords
+            // --------------------------------------------------------
 
             // Wakewords currently used by the project
             this.registeredWakewords = new Set();
 
-            // Number of times each wakeword was detected
+            // Number of detections for each wakeword
             this.wakewordTokens = new Map();
 
             // Number of detections already consumed by Scratch
             this.consumedWakewordTokens = new Map();
+
+            // --------------------------------------------------------
+            // Recognition sessions
+            // --------------------------------------------------------
+
+            /*
+             * Every time recognition is started, this number changes.
+             *
+             * This prevents an old onend/onresult event from interfering
+             * with a newer recognition session.
+             */
+            this.recognitionSession = 0;
+
+            /*
+             * Used for Listen Until Pause promises.
+             */
+            this.pauseSessionId = 0;
 
             const SpeechRecognition =
                 window.SpeechRecognition ||
@@ -50,17 +83,22 @@
                 return;
             }
 
+            this.SpeechRecognition = SpeechRecognition;
+
             this.recognition = new SpeechRecognition();
 
             this.recognition.lang = 'en-US';
+
+            // We control restarts ourselves.
             this.recognition.continuous = true;
             this.recognition.interimResults = true;
 
-            this.setupBackgroundHandlers();
+            // Set up the initial background handlers.
+            this.installBackgroundHandlers();
 
-            // --------------------------------------------------------
+            // ========================================================
             // PROJECT STOP
-            // --------------------------------------------------------
+            // ========================================================
 
             Scratch.vm.runtime.on(
                 'PROJECT_STOP_ALL',
@@ -69,9 +107,9 @@
                 }
             );
 
-            // --------------------------------------------------------
+            // ========================================================
             // PROJECT START
-            // --------------------------------------------------------
+            // ========================================================
 
             Scratch.vm.runtime.on(
                 'PROJECT_START',
@@ -92,12 +130,14 @@
 
             this.projectStopped = false;
 
-            this.isListeningUntilPause = false;
             this.isListening = false;
             this.startingRecognition = false;
 
-            this.backgroundTranscript = '';
+            this.shouldBeListening = false;
+            this.isListeningUntilPause = false;
+
             this.transcript = '';
+            this.backgroundTranscript = '';
 
             this.lastTriggerTime = 0;
 
@@ -107,17 +147,28 @@
 
             this.clearRestartTimer();
 
-            this.setupBackgroundHandlers();
+            /*
+             * Invalidate any old recognition callbacks.
+             */
+            this.recognitionSession++;
 
-            // Discover wakewords BEFORE starting recognition.
+            this.installBackgroundHandlers();
+
+            /*
+             * Find wakewords before starting the microphone.
+             */
             this.discoverWakewords();
 
+            /*
+             * Start the background listener.
+             */
             this.shouldBeListening = true;
+
             this.startBackgroundListening();
         }
 
         // ============================================================
-        // DISCOVER WAKEWORDS FROM THE PROJECT
+        // DISCOVER WAKEWORDS
         // ============================================================
 
         discoverWakewords() {
@@ -150,12 +201,16 @@
 
                     let wakeword = '';
 
-                    // Normal Scratch block field
-                    if (block.fields && block.fields.WORD) {
-                        wakeword = block.fields.WORD.value;
+                    // Normal Scratch field
+                    if (
+                        block.fields &&
+                        block.fields.WORD
+                    ) {
+                        wakeword =
+                            block.fields.WORD.value;
                     }
 
-                    // Fallback for input storage
+                    // Input fallback
                     if (
                         !wakeword &&
                         block.inputs &&
@@ -170,10 +225,13 @@
                         }
                     }
 
-                    wakeword = this.normalizeText(wakeword);
+                    wakeword =
+                        this.normalizeText(wakeword);
 
                     if (wakeword) {
-                        this.registeredWakewords.add(wakeword);
+                        this.registeredWakewords.add(
+                            wakeword
+                        );
                     }
                 }
             }
@@ -191,10 +249,15 @@
 
             this.backgroundTranscript = '';
 
+            this.clearRestartTimer();
+
             this.wakewordTokens.clear();
             this.consumedWakewordTokens.clear();
 
-            this.clearRestartTimer();
+            /*
+             * Invalidate every existing recognition callback.
+             */
+            this.recognitionSession++;
 
             this.startingRecognition = false;
 
@@ -206,14 +269,51 @@
 
             this.isListening = false;
 
-            this.setupBackgroundHandlers();
+            this.installBackgroundHandlers();
         }
+
+        // ============================================================
+        // RESTART TIMER
+        // ============================================================
 
         clearRestartTimer() {
             if (this.restartTimer !== null) {
                 clearTimeout(this.restartTimer);
                 this.restartTimer = null;
             }
+        }
+
+        scheduleBackgroundRestart(delay = 100) {
+            if (
+                !this.recognition ||
+                this.projectStopped ||
+                !this.shouldBeListening ||
+                this.isListeningUntilPause ||
+                this.isListening ||
+                this.startingRecognition
+            ) {
+                return;
+            }
+
+            if (this.restartTimer !== null) {
+                return;
+            }
+
+            this.restartTimer = setTimeout(() => {
+                this.restartTimer = null;
+
+                if (
+                    this.projectStopped ||
+                    !this.shouldBeListening ||
+                    this.isListeningUntilPause ||
+                    this.isListening ||
+                    this.startingRecognition
+                ) {
+                    return;
+                }
+
+                this.startBackgroundListening();
+            }, delay);
         }
 
         // ============================================================
@@ -229,7 +329,10 @@
         }
 
         escapeRegex(text) {
-            return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return text.replace(
+                /[.*+?^${}()|[\]\\]/g,
+                '\\$&'
+            );
         }
 
         containsWakeword(text, wakeword) {
@@ -250,12 +353,16 @@
                 this.escapeRegex(normalizedWakeword);
 
             /*
-             * Match complete words/phrases instead of partial words.
+             * Match complete words/phrases.
              *
-             * Examples:
-             * "computer" -> matches "computer"
-             * "hey computer" -> matches "computer"
-             * "computers" -> does not match "computer"
+             * "computer"
+             * "hey computer"
+             *
+             * will match.
+             *
+             * "computers"
+             *
+             * will not match "computer".
              */
             const regex = new RegExp(
                 '(?:^|\\s)' +
@@ -276,20 +383,27 @@
                 return;
             }
 
+            /*
+             * Always make sure the current project wakewords
+             * are registered.
+             */
+            this.discoverWakewords();
+
             const now = Date.now();
 
-            // Prevent duplicate firing from rapid interim results.
+            /*
+             * Prevent Chrome/Edge interim results from repeatedly
+             * triggering the same word.
+             */
             if (
-                now - this.lastTriggerTime < 300
+                now - this.lastTriggerTime < 350
             ) {
                 return;
             }
 
-            // Pick up wakewords that may have been added
-            // since the project started.
-            this.discoverWakewords();
-
-            for (const wakeword of this.registeredWakewords) {
+            for (
+                const wakeword of this.registeredWakewords
+            ) {
                 if (
                     !this.containsWakeword(
                         text,
@@ -302,7 +416,9 @@
                 this.lastTriggerTime = now;
 
                 const current =
-                    this.wakewordTokens.get(wakeword) || 0;
+                    this.wakewordTokens.get(
+                        wakeword
+                    ) || 0;
 
                 this.wakewordTokens.set(
                     wakeword,
@@ -310,26 +426,23 @@
                 );
 
                 /*
-                 * Remove old speech after a successful detection.
-                 * Keeping a small amount of context prevents
-                 * multi-word wakewords from being lost.
+                 * Clear old speech after detection.
+                 *
+                 * This is important because otherwise the same
+                 * wakeword can remain in the 200-character buffer
+                 * and fire again after recognition restarts.
                  */
-                if (this.backgroundTranscript.length > 60) {
-                    this.backgroundTranscript =
-                        this.backgroundTranscript.slice(-30);
-                } else {
-                    this.backgroundTranscript = '';
-                }
+                this.backgroundTranscript = '';
 
                 return;
             }
         }
 
         // ============================================================
-        // BACKGROUND HANDLERS
+        // BACKGROUND RECOGNITION HANDLERS
         // ============================================================
 
-        setupBackgroundHandlers() {
+        installBackgroundHandlers() {
             if (!this.recognition) {
                 return;
             }
@@ -344,6 +457,10 @@
             // --------------------------------------------------------
 
             recognition.onresult = (event) => {
+                /*
+                 * If Listen Until Pause has taken control,
+                 * background recognition must ignore this event.
+                 */
                 if (
                     this.projectStopped ||
                     this.isListeningUntilPause ||
@@ -352,7 +469,6 @@
                     return;
                 }
 
-                // Make sure newly added wakewords are registered.
                 this.discoverWakewords();
 
                 let speech = '';
@@ -367,12 +483,17 @@
                         event.results[i][0].transcript;
                 }
 
-                speech = this.normalizeText(speech);
+                speech =
+                    this.normalizeText(speech);
 
                 if (!speech) {
                     return;
                 }
 
+                /*
+                 * Add the new recognition result to our small
+                 * rolling buffer.
+                 */
                 this.backgroundTranscript = (
                     this.backgroundTranscript +
                     ' ' +
@@ -381,8 +502,13 @@
                     .replace(/\s+/g, ' ')
                     .trim();
 
-                // Keep enough history for multi-word wakewords.
-                if (this.backgroundTranscript.length > 200) {
+                /*
+                 * Keep enough text for multi-word wakewords,
+                 * but don't keep an unlimited transcript.
+                 */
+                if (
+                    this.backgroundTranscript.length > 200
+                ) {
                     this.backgroundTranscript =
                         this.backgroundTranscript.slice(-200);
                 }
@@ -397,6 +523,9 @@
             // --------------------------------------------------------
 
             recognition.onerror = (event) => {
+                /*
+                 * Most of these are normal Web Speech API events.
+                 */
                 if (
                     event.error !== 'no-speech' &&
                     event.error !== 'aborted' &&
@@ -407,11 +536,6 @@
                         event.error
                     );
                 }
-
-                /*
-                 * Some Chromium versions end recognition after
-                 * certain errors. onend will handle restarting.
-                 */
             };
 
             // --------------------------------------------------------
@@ -422,6 +546,10 @@
                 this.isListening = false;
                 this.startingRecognition = false;
 
+                /*
+                 * Never restart background recognition if something
+                 * else has taken control.
+                 */
                 if (
                     this.projectStopped ||
                     this.isListeningUntilPause ||
@@ -430,47 +558,14 @@
                     return;
                 }
 
-                // Restart quickly, but through the guarded
-                // restart function so start() cannot race itself.
-                this.scheduleBackgroundRestart(50);
+                /*
+                 * Recognition ending is normal with Chromium's
+                 * SpeechRecognition API.
+                 *
+                 * Restart it automatically.
+                 */
+                this.scheduleBackgroundRestart(100);
             };
-        }
-
-        // ============================================================
-        // RESTART
-        // ============================================================
-
-        scheduleBackgroundRestart(delay) {
-            if (
-                !this.recognition ||
-                this.projectStopped ||
-                this.isListeningUntilPause ||
-                !this.shouldBeListening ||
-                this.isListening ||
-                this.startingRecognition
-            ) {
-                return;
-            }
-
-            if (this.restartTimer !== null) {
-                return;
-            }
-
-            this.restartTimer = setTimeout(() => {
-                this.restartTimer = null;
-
-                if (
-                    this.projectStopped ||
-                    this.isListeningUntilPause ||
-                    !this.shouldBeListening ||
-                    this.isListening ||
-                    this.startingRecognition
-                ) {
-                    return;
-                }
-
-                this.startBackgroundListening();
-            }, delay);
         }
 
         // ============================================================
@@ -481,8 +576,8 @@
             if (
                 !this.recognition ||
                 this.projectStopped ||
-                this.isListeningUntilPause ||
                 !this.shouldBeListening ||
+                this.isListeningUntilPause ||
                 this.isListening ||
                 this.startingRecognition
             ) {
@@ -494,6 +589,8 @@
             this.recognition.continuous = true;
             this.recognition.interimResults = true;
 
+            this.installBackgroundHandlers();
+
             this.startingRecognition = true;
 
             try {
@@ -502,10 +599,14 @@
                 this.isListening = true;
                 this.startingRecognition = false;
             } catch (e) {
+                /*
+                 * InvalidStateError can happen if Chrome thinks
+                 * recognition is still shutting down.
+                 */
                 this.isListening = false;
                 this.startingRecognition = false;
 
-                this.scheduleBackgroundRestart(150);
+                this.scheduleBackgroundRestart(200);
             }
         }
 
@@ -532,8 +633,10 @@
                         text: 'on wakeword [WORD]',
                         arguments: {
                             WORD: {
-                                type: Scratch.ArgumentType.STRING,
-                                defaultValue: 'computer'
+                                type:
+                                    Scratch.ArgumentType.STRING,
+                                defaultValue:
+                                    'computer'
                             }
                         }
                     },
@@ -579,32 +682,45 @@
                 return false;
             }
 
-            // Register immediately.
-            this.registeredWakewords.add(wakeword);
+            /*
+             * Register this wakeword immediately.
+             */
+            this.registeredWakewords.add(
+                wakeword
+            );
 
-            // Make sure the background listener is active.
+            /*
+             * Make sure background recognition is running.
+             */
             if (!this.shouldBeListening) {
                 this.shouldBeListening = true;
+
                 this.startBackgroundListening();
             } else if (
                 !this.isListening &&
-                this.restartTimer === null &&
-                !this.startingRecognition
+                !this.startingRecognition &&
+                this.restartTimer === null
             ) {
                 this.startBackgroundListening();
             }
 
             const detected =
-                this.wakewordTokens.get(wakeword) || 0;
+                this.wakewordTokens.get(
+                    wakeword
+                ) || 0;
 
             const consumed =
-                this.consumedWakewordTokens.get(wakeword) || 0;
+                this.consumedWakewordTokens.get(
+                    wakeword
+                ) || 0;
 
             if (detected <= consumed) {
                 return false;
             }
 
-            // Consume exactly one detection token.
+            /*
+             * Consume exactly one detection.
+             */
             this.consumedWakewordTokens.set(
                 wakeword,
                 consumed + 1
@@ -622,26 +738,83 @@
                 return Promise.resolve();
             }
 
+            /*
+             * If the project was stopped, don't do anything.
+             */
+            if (this.projectStopped) {
+                return Promise.resolve();
+            }
+
+            /*
+             * If another Listen Until Pause is already active,
+             * don't start a second microphone session.
+             */
+            if (this.isListeningUntilPause) {
+                return Promise.resolve();
+            }
+
             return new Promise((resolve) => {
-                const startSession = () => {
-                    if (this.projectStopped) {
+                /*
+                 * Create a unique ID for this pause session.
+                 */
+                const pauseSession =
+                    ++this.pauseSessionId;
+
+                /*
+                 * Background recognition must stop.
+                 */
+                this.shouldBeListening = false;
+
+                this.isListeningUntilPause = true;
+
+                this.clearRestartTimer();
+
+                /*
+                 * Invalidate background callbacks.
+                 */
+                this.recognitionSession++;
+
+                /*
+                 * Wait for the current recognition session to end
+                 * before starting the one-shot session.
+                 */
+                const startPauseSession = () => {
+                    /*
+                     * Check that this is still the current request.
+                     */
+                    if (
+                        pauseSession !==
+                        this.pauseSessionId
+                    ) {
                         resolve();
                         return;
                     }
 
-                    this.shouldBeListening = false;
-                    this.isListeningUntilPause = true;
-
-                    this.clearRestartTimer();
-
-                    this.startingRecognition = false;
+                    if (this.projectStopped) {
+                        this.isListeningUntilPause = false;
+                        resolve();
+                        return;
+                    }
 
                     let sessionTranscript = '';
 
+                    /*
+                     * One-shot recognition.
+                     */
                     this.recognition.continuous = false;
                     this.recognition.interimResults = true;
 
+                    /*
+                     * RESULT
+                     */
                     this.recognition.onresult = (event) => {
+                        if (
+                            pauseSession !==
+                            this.pauseSessionId
+                        ) {
+                            return;
+                        }
+
                         let interim = '';
                         let finalTranscript = '';
 
@@ -650,124 +823,211 @@
                             i < event.results.length;
                             i++
                         ) {
-                            const result = event.results[i];
+                            const result =
+                                event.results[i];
 
                             if (result.isFinal) {
                                 finalTranscript +=
+                                    ' ' +
                                     result[0].transcript;
                             } else {
                                 interim +=
+                                    ' ' +
                                     result[0].transcript;
                             }
                         }
 
                         /*
-                         * Keep the most recent recognized speech.
-                         * Final speech takes priority over interim speech.
+                         * Keep the complete final transcript,
+                         * rather than replacing it every time.
                          */
                         if (finalTranscript.trim()) {
-                            sessionTranscript =
-                                finalTranscript.trim();
-                        } else if (interim.trim()) {
+                            sessionTranscript = (
+                                sessionTranscript +
+                                ' ' +
+                                finalTranscript
+                            )
+                                .replace(/\s+/g, ' ')
+                                .trim();
+                        } else if (
+                            interim.trim() &&
+                            !sessionTranscript
+                        ) {
                             sessionTranscript =
                                 interim.trim();
                         }
                     };
 
+                    /*
+                     * ERROR
+                     */
                     this.recognition.onerror = (event) => {
                         if (
                             event.error !== 'no-speech' &&
                             event.error !== 'aborted'
                         ) {
-                            console.error(
+                            console.warn(
                                 'Speech recognition error:',
                                 event.error
                             );
                         }
                     };
 
+                    /*
+                     * END
+                     */
                     this.recognition.onend = () => {
+                        /*
+                         * Ignore an old session ending after a
+                         * newer session has started.
+                         */
+                        if (
+                            pauseSession !==
+                            this.pauseSessionId
+                        ) {
+                            return;
+                        }
+
                         this.isListening = false;
                         this.startingRecognition = false;
 
-                        this.isListeningUntilPause = false;
+                        this.isListeningUntilPause =
+                            false;
 
                         this.transcript =
-                            sessionTranscript;
+                            sessionTranscript.trim();
 
                         this.backgroundTranscript = '';
 
-                        this.setupBackgroundHandlers();
-
+                        /*
+                         * If the project was stopped while listening,
+                         * don't restart anything.
+                         */
                         if (this.projectStopped) {
                             this.shouldBeListening = false;
+
+                            this.installBackgroundHandlers();
+
                             resolve();
                             return;
                         }
 
+                        /*
+                         * Give recognition control back to the
+                         * background wakeword system.
+                         */
+                        this.installBackgroundHandlers();
+
                         this.shouldBeListening = true;
 
-                        this.scheduleBackgroundRestart(50);
+                        /*
+                         * Restart the background listener.
+                         */
+                        this.scheduleBackgroundRestart(100);
 
                         resolve();
                     };
 
-                    this.isListening = true;
+                    /*
+                     * START
+                     */
                     this.startingRecognition = true;
 
                     try {
                         this.recognition.start();
 
+                        this.isListening = true;
                         this.startingRecognition = false;
                     } catch (e) {
+                        /*
+                         * Sometimes Chromium reports that
+                         * recognition is already starting/stopping.
+                         *
+                         * Give it a moment and try again.
+                         */
                         this.isListening = false;
                         this.startingRecognition = false;
 
-                        this.isListeningUntilPause = false;
+                        setTimeout(() => {
+                            if (
+                                pauseSession !==
+                                this.pauseSessionId
+                            ) {
+                                return;
+                            }
 
-                        this.setupBackgroundHandlers();
+                            if (this.projectStopped) {
+                                this.isListeningUntilPause =
+                                    false;
 
-                        if (!this.projectStopped) {
-                            this.shouldBeListening = true;
-                            this.scheduleBackgroundRestart(150);
-                        }
+                                resolve();
+                                return;
+                            }
 
-                        resolve();
+                            /*
+                             * Try the one-shot session again.
+                             */
+                            startPauseSession();
+                        }, 150);
                     }
                 };
 
                 /*
-                 * If background recognition is already running,
-                 * stop it first. The onend handler then starts
-                 * the one-shot listening session.
+                 * If background recognition is currently active,
+                 * stop it first.
                  */
                 if (this.isListening) {
+                    const oldSession =
+                        ++this.recognitionSession;
+
+                    /*
+                     * Temporarily listen for the end of the old
+                     * recognition session.
+                     */
                     this.recognition.onend = () => {
                         this.isListening = false;
                         this.startingRecognition = false;
 
+                        /*
+                         * Make sure this wasn't cancelled.
+                         */
+                        if (
+                            pauseSession !==
+                            this.pauseSessionId
+                        ) {
+                            return;
+                        }
+
                         if (this.projectStopped) {
+                            this.isListeningUntilPause =
+                                false;
+
                             resolve();
                             return;
                         }
 
-                        startSession();
+                        startPauseSession();
                     };
 
                     try {
                         this.recognition.stop();
                     } catch (e) {
+                        /*
+                         * If stop() fails because recognition has
+                         * already ended, continue immediately.
+                         */
                         this.isListening = false;
                         this.startingRecognition = false;
 
-                        if (this.projectStopped) {
-                            resolve();
-                        } else {
-                            startSession();
+                        if (
+                            pauseSession ===
+                            this.pauseSessionId
+                        ) {
+                            startPauseSession();
                         }
                     }
                 } else {
-                    startSession();
+                    startPauseSession();
                 }
             });
         }
@@ -785,12 +1045,26 @@
         // ============================================================
 
         cancelListening() {
+            /*
+             * Invalidate any Listen Until Pause operation.
+             */
+            this.pauseSessionId++;
+
+            /*
+             * Stop automatic background listening.
+             */
             this.shouldBeListening = false;
+
             this.isListeningUntilPause = false;
 
             this.backgroundTranscript = '';
 
             this.clearRestartTimer();
+
+            /*
+             * Invalidate old recognition callbacks.
+             */
+            this.recognitionSession++;
 
             this.startingRecognition = false;
 
@@ -802,7 +1076,7 @@
 
             this.isListening = false;
 
-            this.setupBackgroundHandlers();
+            this.installBackgroundHandlers();
         }
     }
 
