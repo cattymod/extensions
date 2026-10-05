@@ -5,6 +5,12 @@
 // License: MIT
 
 class JavaScriptExtension {
+    constructor() {
+        // Temporary permission for eval.
+        // This resets when the extension/page is reloaded.
+        this.evalConfirmed = false;
+    }
+
     getInfo() {
         return {
             id: "javascript",
@@ -157,7 +163,19 @@ class JavaScriptExtension {
     // =========================
 
     confirmExecution() {
-        return window.confirm("Run custom unsafe code?");
+        // Already confirmed during this extension session
+        if (this.evalConfirmed) {
+            return true;
+        }
+
+        const confirmed = window.confirm("Allow custom unsafe code?");
+
+        if (confirmed) {
+            // Remember permission temporarily
+            this.evalConfirmed = true;
+        }
+
+        return confirmed;
     }
 
     // =========================
