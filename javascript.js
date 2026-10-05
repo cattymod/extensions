@@ -168,7 +168,7 @@ class JavaScriptExtension {
             return true;
         }
 
-        const confirmed = window.confirm("Allow custom unsafe code?");
+        const confirmed = window.confirm("Allow custom unsafe code for this session?");
 
         if (confirmed) {
             // Remember permission temporarily
