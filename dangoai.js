@@ -111,7 +111,7 @@
                             PROMPT: {
                                 type: Scratch.ArgumentType.STRING,
                                 defaultValue:
-                                    "You are a helpful and friendly AI assistant."
+                                    "This is a game where you battle using Rock Paper Scissors."
                             }
                         }
                     },
