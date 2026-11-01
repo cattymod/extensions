@@ -53,6 +53,7 @@
                 color1: "#e066ff",
                 color2: "#b950d3",
                 color3: "#b950d3",
+                docsURI: "https://cattymod.app/docs/extensions/dangoaudio",
 
                 blocks: [
                     {
