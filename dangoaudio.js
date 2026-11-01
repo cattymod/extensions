@@ -68,16 +68,6 @@
                         }
                     },
                     {
-                        opcode: "pauseRecording",
-                        blockType: Scratch.BlockType.COMMAND,
-                        text: "Pause Recording Audio"
-                    },
-                    {
-                        opcode: "resumeRecording",
-                        blockType: Scratch.BlockType.COMMAND,
-                        text: "Resume Recording Audio"
-                    },
-                    {
                         opcode: "endRecording",
                         blockType: Scratch.BlockType.COMMAND,
                         text: "End Recording Audio"
@@ -352,22 +342,6 @@
             }
 
             this.analyser = null;
-        }
-
-        pauseRecording() {
-            if (this.recorder &&
-                this.recorder.state === "recording") {
-                this.recorder.pause();
-                clearTimeout(this.silenceTimer);
-                this.silenceTimer = null;
-            }
-        }
-
-        resumeRecording() {
-            if (this.recorder &&
-                this.recorder.state === "paused") {
-                this.recorder.resume();
-            }
         }
 
         async endRecording() {
