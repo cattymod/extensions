@@ -153,7 +153,7 @@
                         acceptReporters: false,
                         items: [
                             { text: "Until Done", value: "UNTIL_DONE" },
-                            { text: "In Background", value: "BACKGROUND" }
+                            { text: "In the Background", value: "BACKGROUND" }
                         ]
                     },
                     formats: {
