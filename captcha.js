@@ -1,4 +1,3 @@
-
 (function (Scratch) {
     "use strict";
 
@@ -280,7 +279,7 @@
                 .then(() => {
                     if (settled) return;
 
-                    status.textContent = "Complete the challenge below.";
+                    status.textContent = "Complete the challenge above.";
 
                     widgetId = window.hcaptcha.render(captcha, {
                         sitekey: SITE_KEY,
