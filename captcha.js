@@ -1,3 +1,8 @@
+// Name: I'm not a robot
+// ID: imnotarobot
+// Description: Use Captcha tests in CattyMod, powered by hCaptcha!
+// By: Noahscratch493
+// License: MIT
 
 (function (Scratch) {
     "use strict";
