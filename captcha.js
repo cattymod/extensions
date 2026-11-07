@@ -373,6 +373,7 @@
             return {
                 id: "imnotarobot",
                 name: "I'm not a robot",
+                docsURI: "https://cattymod.app/docs/extensions/captcha",
 
                 color1: "#4285F4",
                 color2: "#AECBFA",
