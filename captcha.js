@@ -1,3 +1,4 @@
+
 (function (Scratch) {
     "use strict";
 
@@ -54,43 +55,9 @@
         return hcaptchaLoader;
     }
 
-    // Resolve the effective theme.
+    // Get the currently selected theme.
     function getEffectiveTheme() {
-        if (selectedTheme === "LIGHT") {
-            return "light";
-        }
-
-        if (selectedTheme === "DARK") {
-            return "dark";
-        }
-
-        // CattyMod Theme
-        if (selectedTheme === "CATTYMOD") {
-            let cattyTheme = null;
-
-            try {
-                cattyTheme = localStorage.getItem("tw:theme");
-            } catch (e) {}
-
-            if (cattyTheme === "Light") {
-                return "light";
-            }
-
-            if (
-                cattyTheme === "Dark" ||
-                cattyTheme === "midnight"
-            ) {
-                return "dark";
-            }
-
-            // Fall back to system preference.
-            return window.matchMedia &&
-                window.matchMedia("(prefers-color-scheme: dark)").matches
-                ? "dark"
-                : "light";
-        }
-
-        return "light";
+        return selectedTheme === "DARK" ? "dark" : "light";
     }
 
     // Apply modal appearance.
@@ -111,7 +78,6 @@
                 text: "#E8EAED",
                 border: "#3C4043",
                 shadow: "rgba(0,0,0,.4)",
-                bodyText: "#E8EAED",
                 status: "#BDC1C6",
                 footer: "#292A2D",
                 footerBorder: "#3C4043",
@@ -125,7 +91,6 @@
                 text: "#333333",
                 border: "rgb(217,217,217)",
                 shadow: "rgba(0,0,0,.15)",
-                bodyText: "#333333",
                 status: "#575e75",
                 footer: "rgb(242,242,242)",
                 footerBorder: "rgb(221,221,221)",
@@ -454,8 +419,7 @@
                         acceptReporters: false,
                         items: [
                             { text: "Light", value: "LIGHT" },
-                            { text: "Dark", value: "DARK" },
-                            { text: "CattyMod Theme", value: "CATTYMOD" }
+                            { text: "Dark", value: "DARK" }
                         ]
                     }
                 }
@@ -465,7 +429,12 @@
         setDifficulty(args) {
             const difficulty = args.DIFFICULTY;
 
-            if (Object.prototype.hasOwnProperty.call(SITE_KEYS, difficulty)) {
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    SITE_KEYS,
+                    difficulty
+                )
+            ) {
                 selectedDifficulty = difficulty;
             }
         }
@@ -473,7 +442,7 @@
         setTheme(args) {
             const theme = args.THEME;
 
-            if (["LIGHT", "DARK", "CATTYMOD"].includes(theme)) {
+            if (["LIGHT", "DARK"].includes(theme)) {
                 selectedTheme = theme;
             }
         }
