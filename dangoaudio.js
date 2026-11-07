@@ -1,3 +1,9 @@
+// Name: Audio Recorder
+// ID: dangoaudio
+// Description: Record your voice in CattyMod!
+// By: Noahscratch493
+// License: MIT
+
 (function (Scratch) {
     "use strict";
 
