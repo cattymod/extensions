@@ -5,8 +5,17 @@
         throw new Error("I'm not a robot requires unsandboxed mode!");
     }
 
-    const SITE_KEY = "a7b5473d-cad0-4665-9f75-70dea0642d5c";
+    const SITE_KEYS = {
+        AUTO: "a7b5473d-cad0-4665-9f75-70dea0642d5c",
+        EASY: "75be5932-0fa0-4106-9bc6-7fe87d58dd06",
+        MODERATE: "857eb5e4-c7d8-4e7a-bdc0-814c6d34f1e6",
+        DIFFICULT: "8ba4f212-312a-4238-a456-ac5cf61a4850"
+    };
+
     const accentColor = "#4285F4";
+
+    let selectedDifficulty = "AUTO";
+    let selectedTheme = "LIGHT";
 
     let hcaptchaLoader = null;
     let activeChallenge = false;
@@ -19,13 +28,19 @@
 
         hcaptchaLoader = new Promise((resolve, reject) => {
             const script = document.createElement("script");
-            script.src = "https://js.hcaptcha.com/1/api.js?render=explicit&recaptchacompat=off";
+
+            script.src =
+                "https://js.hcaptcha.com/1/api.js?render=explicit&recaptchacompat=off";
+
             script.async = true;
             script.defer = true;
 
             script.onload = () => {
-                if (window.hcaptcha) resolve();
-                else reject(new Error("hCaptcha unavailable"));
+                if (window.hcaptcha) {
+                    resolve();
+                } else {
+                    reject(new Error("hCaptcha unavailable"));
+                }
             };
 
             script.onerror = () => {
@@ -39,7 +54,47 @@
         return hcaptchaLoader;
     }
 
-    function createStyle() {
+    // Resolve the effective theme.
+    function getEffectiveTheme() {
+        if (selectedTheme === "LIGHT") {
+            return "light";
+        }
+
+        if (selectedTheme === "DARK") {
+            return "dark";
+        }
+
+        // CattyMod Theme
+        if (selectedTheme === "CATTYMOD") {
+            let cattyTheme = null;
+
+            try {
+                cattyTheme = localStorage.getItem("tw:theme");
+            } catch (e) {}
+
+            if (cattyTheme === "Light") {
+                return "light";
+            }
+
+            if (
+                cattyTheme === "Dark" ||
+                cattyTheme === "midnight"
+            ) {
+                return "dark";
+            }
+
+            // Fall back to system preference.
+            return window.matchMedia &&
+                window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+        }
+
+        return "light";
+    }
+
+    // Apply modal appearance.
+    function createStyle(theme) {
         let style = document.getElementById("im-not-a-robot-style");
 
         if (!style) {
@@ -47,6 +102,38 @@
             style.id = "im-not-a-robot-style";
             document.head.appendChild(style);
         }
+
+        const dark = theme === "dark";
+
+        const colors = dark
+            ? {
+                background: "#202124",
+                text: "#E8EAED",
+                border: "#3C4043",
+                shadow: "rgba(0,0,0,.4)",
+                bodyText: "#E8EAED",
+                status: "#BDC1C6",
+                footer: "#292A2D",
+                footerBorder: "#3C4043",
+                cancelBackground: "#3C4043",
+                cancelText: "#E8EAED",
+                cancelBorder: "rgba(255,255,255,.12)",
+                description: "#E8EAED"
+            }
+            : {
+                background: "#ffffff",
+                text: "#333333",
+                border: "rgb(217,217,217)",
+                shadow: "rgba(0,0,0,.15)",
+                bodyText: "#333333",
+                status: "#575e75",
+                footer: "rgb(242,242,242)",
+                footerBorder: "rgb(221,221,221)",
+                cancelBackground: "#e5e5e5",
+                cancelText: "#575e75",
+                cancelBorder: "rgba(0,0,0,.15)",
+                description: "#333333"
+            };
 
         style.textContent = `
             .robot-overlay {
@@ -70,11 +157,11 @@
             .robot-modal {
                 width: 360px;
                 max-width: 90vw;
-                background: #ffffff;
-                color: #333333;
+                background: ${colors.background};
+                color: ${colors.text};
                 border-radius: 12px;
-                border: 2px solid rgb(217,217,217);
-                box-shadow: rgba(0,0,0,.15) 0px 6px 0px;
+                border: 2px solid ${colors.border};
+                box-shadow: ${colors.shadow} 0px 6px 0px;
                 overflow: hidden;
                 position: relative;
                 box-sizing: border-box;
@@ -131,7 +218,7 @@
                 margin: 0;
                 font-size: 14px;
                 line-height: 1.4;
-                color: #333333;
+                color: ${colors.description};
             }
 
             .robot-captcha {
@@ -143,7 +230,7 @@
 
             .robot-status {
                 font-size: 12px;
-                color: #575e75;
+                color: ${colors.status};
                 margin: 0;
             }
 
@@ -152,8 +239,8 @@
                 justify-content: flex-end;
                 gap: 10px;
                 padding: 12px;
-                background: rgb(242,242,242);
-                border-top: 1px solid rgb(221,221,221);
+                background: ${colors.footer};
+                border-top: 1px solid ${colors.footerBorder};
             }
 
             .robot-button {
@@ -172,24 +259,28 @@
             }
 
             .robot-cancel {
-                background: #e5e5e5;
-                color: #575e75;
-                border: 1px solid rgba(0,0,0,.15);
+                background: ${colors.cancelBackground};
+                color: ${colors.cancelText};
+                border: 1px solid ${colors.cancelBorder};
             }
         `;
     }
 
     function amIRobot() {
-        // Prevent multiple simultaneous challenges.
-        if (activeChallenge) return Promise.resolve(false);
+        if (activeChallenge) {
+            return Promise.resolve(false);
+        }
 
         activeChallenge = true;
+
+        const currentSiteKey = SITE_KEYS[selectedDifficulty];
+        const currentTheme = getEffectiveTheme();
 
         return new Promise(resolve => {
             let settled = false;
             let widgetId = null;
 
-            createStyle();
+            createStyle(currentTheme);
 
             const overlay = document.createElement("div");
             overlay.className = "robot-overlay";
@@ -254,10 +345,7 @@
                 activeChallenge = false;
                 currentModal = null;
 
-                if (
-                    widgetId !== null &&
-                    window.hcaptcha
-                ) {
+                if (widgetId !== null && window.hcaptcha) {
                     try {
                         window.hcaptcha.remove(widgetId);
                     } catch (e) {}
@@ -279,11 +367,12 @@
                 .then(() => {
                     if (settled) return;
 
-                    status.textContent = "Complete the challenge above.";
+                    status.textContent =
+                        "Complete the challenge above.";
 
                     widgetId = window.hcaptcha.render(captcha, {
-                        sitekey: SITE_KEY,
-                        theme: "light",
+                        sitekey: currentSiteKey,
+                        theme: currentTheme,
 
                         callback: function(token) {
                             finish(!!token);
@@ -321,13 +410,72 @@
 
                 blocks: [
                     {
+                        opcode: "setDifficulty",
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: "set challenge difficulty to [DIFFICULTY]",
+                        arguments: {
+                            DIFFICULTY: {
+                                type: Scratch.ArgumentType.STRING,
+                                menu: "difficultyMenu"
+                            }
+                        }
+                    },
+                    {
+                        opcode: "setTheme",
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: "set theme to [THEME]",
+                        arguments: {
+                            THEME: {
+                                type: Scratch.ArgumentType.STRING,
+                                menu: "themeMenu"
+                            }
+                        }
+                    },
+                    {
                         opcode: "amIRobot",
                         blockType: Scratch.BlockType.BOOLEAN,
                         text: "am I not a robot?",
                         disableMonitor: true
                     }
-                ]
+                ],
+
+                menus: {
+                    difficultyMenu: {
+                        acceptReporters: false,
+                        items: [
+                            { text: "Auto", value: "AUTO" },
+                            { text: "Easy", value: "EASY" },
+                            { text: "Moderate", value: "MODERATE" },
+                            { text: "Difficult", value: "DIFFICULT" }
+                        ]
+                    },
+
+                    themeMenu: {
+                        acceptReporters: false,
+                        items: [
+                            { text: "Light", value: "LIGHT" },
+                            { text: "Dark", value: "DARK" },
+                            { text: "CattyMod Theme", value: "CATTYMOD" }
+                        ]
+                    }
+                }
             };
+        }
+
+        setDifficulty(args) {
+            const difficulty = args.DIFFICULTY;
+
+            if (Object.prototype.hasOwnProperty.call(SITE_KEYS, difficulty)) {
+                selectedDifficulty = difficulty;
+            }
+        }
+
+        setTheme(args) {
+            const theme = args.THEME;
+
+            if (["LIGHT", "DARK", "CATTYMOD"].includes(theme)) {
+                selectedTheme = theme;
+            }
         }
 
         amIRobot() {
