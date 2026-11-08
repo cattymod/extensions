@@ -916,7 +916,7 @@
                     {
                         opcode: "addHeadingIcon",
                         blockType: Scratch.BlockType.COMMAND,
-                        text: "add heading icon from Lucide Icon ID [ICON]",
+                        text: "set heading icon to Lucide Icon ID [ICON]",
                         arguments: {
                             ICON: {
                                 type: Scratch.ArgumentType.STRING,
