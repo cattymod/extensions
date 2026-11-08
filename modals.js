@@ -101,6 +101,81 @@
         body.appendChild(container);
     }
 
+    // LIVE ICON UPDATES
+
+    function updateWindowIcon() {
+        if (!modal) return;
+
+        const header = modal.querySelector(
+            ".scratch-modal-header"
+        );
+
+        if (!header) return;
+
+        const oldIcon = header.querySelector(
+            ".scratch-modal-window-icon"
+        );
+
+        if (oldIcon) oldIcon.remove();
+
+        addWindowIcon(header);
+    }
+
+    function updateHeadingIcon() {
+        if (!modal) return;
+
+        const body = modal.querySelector(
+            ".scratch-modal-body"
+        );
+
+        if (!body) return;
+
+        const oldIcon = body.querySelector(
+            ".scratch-modal-heading-icon"
+        );
+
+        if (oldIcon) oldIcon.remove();
+
+        addHeadingIcon(body);
+    }
+
+    function updateButtonIcons() {
+        if (!modal) return;
+
+        const buttons = modal.querySelectorAll(
+            ".scratch-modal-button"
+        );
+
+        buttons.forEach(button => {
+            const name = button.querySelector("span")?.textContent;
+
+            if (!name) return;
+
+            const oldIcon = button.querySelector(
+                ".scratch-modal-button-icon"
+            );
+
+            if (oldIcon) oldIcon.remove();
+
+            const iconID = buttonIcons[name];
+
+            if (iconID) {
+                const icon = createIcon(
+                    iconID,
+                    15,
+                    "scratch-modal-button-icon"
+                );
+
+                if (icon) {
+                    button.insertBefore(
+                        icon,
+                        button.firstChild
+                    );
+                }
+            }
+        });
+    }
+
     function getHoverColor(hex) {
         let color = hex.replace("#", "");
 
@@ -496,12 +571,9 @@
             frame.src = content;
             frame.title = title;
             body.appendChild(frame);
-
-            nextHeadingIcon = "";
         } else {
             addHeadingIcon(body);
             body.insertAdjacentText("beforeend", content);
-            nextHeadingIcon = "";
         }
 
         box.appendChild(body);
@@ -631,7 +703,6 @@
             body.className = "scratch-modal-body";
 
             addHeadingIcon(body);
-            nextHeadingIcon = "";
 
             if (message) {
                 const msgEl = document.createElement("p");
@@ -1109,8 +1180,10 @@
 
             if (type === "Window Icon") {
                 windowIcon = id;
+                updateWindowIcon();
             } else if (type === "Heading Icon") {
                 nextHeadingIcon = id;
+                updateHeadingIcon();
             }
         }
 
@@ -1125,16 +1198,27 @@
             } else {
                 delete buttonIcons[buttonName];
             }
+
+            updateButtonIcons();
         }
 
         removeWindowIcons() {
             windowIcon = "";
             nextHeadingIcon = "";
             buttonIcons = {};
+
+            if (!modal) return;
+
+            modal.querySelectorAll(
+                ".scratch-modal-window-icon, " +
+                ".scratch-modal-heading-icon, " +
+                ".scratch-modal-button-icon"
+            ).forEach(icon => icon.remove());
         }
 
         addHeadingIcon(args) {
             nextHeadingIcon = validIconID(args.ICON);
+            updateHeadingIcon();
         }
 
         // SETTINGS
