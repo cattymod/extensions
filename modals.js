@@ -900,7 +900,7 @@
                     {
                         opcode: "setWindowIcon",
                         blockType: Scratch.BlockType.COMMAND,
-                        text: "set window icon for all modals to Lucide Icon ID [ICON]",
+                        text: "set window icon to Lucide Icon ID [ICON]",
                         arguments: {
                             ICON: {
                                 type: Scratch.ArgumentType.STRING,
