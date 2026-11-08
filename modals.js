@@ -19,6 +19,7 @@
     // Icon settings
     let windowIcon = "";
     let nextHeadingIcon = "";
+    let buttonIcons = {};
 
     // Prompt state
     let promptTitle = "Prompt";
@@ -312,6 +313,21 @@
             color: white;
         }
 
+        .scratch-modal-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .scratch-modal-button-icon {
+            width: 15px;
+            height: 15px;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+            flex-shrink: 0;
+        }
+
         .scratch-modal-button:hover,
         .scratch-prompt-btn-ok:hover {
             filter: brightness(1.12);
@@ -481,7 +497,6 @@
             frame.title = title;
             body.appendChild(frame);
 
-            // Heading icons are not used in HTML/iframe modals.
             nextHeadingIcon = "";
         } else {
             addHeadingIcon(body);
@@ -522,7 +537,24 @@
 
         const button = document.createElement("button");
         button.className = "scratch-modal-button";
-        button.textContent = name;
+
+        const iconID = buttonIcons[name];
+
+        if (iconID) {
+            const icon = createIcon(
+                iconID,
+                15,
+                "scratch-modal-button-icon"
+            );
+
+            if (icon) {
+                button.appendChild(icon);
+            }
+        }
+
+        const text = document.createElement("span");
+        text.textContent = name;
+        button.appendChild(text);
 
         const colors = [
             accentColor,
@@ -900,11 +932,31 @@
                     {
                         opcode: "setWindowIcon",
                         blockType: Scratch.BlockType.COMMAND,
-                        text: "set window icon to Lucide Icon ID [ICON]",
+                        text: "set [TYPE] to Lucide ID [ICON]",
                         arguments: {
+                            TYPE: {
+                                type: Scratch.ArgumentType.STRING,
+                                menu: "ICON_TYPES",
+                                defaultValue: "Window Icon"
+                            },
                             ICON: {
                                 type: Scratch.ArgumentType.STRING,
                                 defaultValue: "star"
+                            }
+                        }
+                    },
+                    {
+                        opcode: "setButtonIcon",
+                        blockType: Scratch.BlockType.COMMAND,
+                        text: "set button [BUTTON] icon to Lucide ID [ICON]",
+                        arguments: {
+                            BUTTON: {
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: "OK"
+                            },
+                            ICON: {
+                                type: Scratch.ArgumentType.STRING,
+                                defaultValue: "check"
                             }
                         }
                     },
@@ -916,7 +968,8 @@
                     {
                         opcode: "addHeadingIcon",
                         blockType: Scratch.BlockType.COMMAND,
-                        text: "set heading icon to Lucide Icon ID [ICON]",
+                        text: "LEGACY - set heading icon to Lucide Icon ID [ICON]",
+                        hideFromPalette: true,
                         arguments: {
                             ICON: {
                                 type: Scratch.ArgumentType.STRING,
@@ -982,6 +1035,14 @@
                     THEMES: {
                         acceptReporters: false,
                         items: ["Light", "Dark"]
+                    },
+
+                    ICON_TYPES: {
+                        acceptReporters: false,
+                        items: [
+                            "Window Icon",
+                            "Heading Icon"
+                        ]
                     }
                 }
             };
@@ -1043,13 +1104,33 @@
         // ICONS
 
         setWindowIcon(args) {
+            const type = Scratch.Cast.toString(args.TYPE);
             const id = validIconID(args.ICON);
 
-            windowIcon = id;
+            if (type === "Window Icon") {
+                windowIcon = id;
+            } else if (type === "Heading Icon") {
+                nextHeadingIcon = id;
+            }
+        }
+
+        setButtonIcon(args) {
+            const buttonName = Scratch.Cast.toString(args.BUTTON);
+            const id = validIconID(args.ICON);
+
+            if (!buttonName) return;
+
+            if (id) {
+                buttonIcons[buttonName] = id;
+            } else {
+                delete buttonIcons[buttonName];
+            }
         }
 
         removeWindowIcons() {
             windowIcon = "";
+            nextHeadingIcon = "";
+            buttonIcons = {};
         }
 
         addHeadingIcon(args) {
